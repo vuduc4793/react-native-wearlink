@@ -1,0 +1,10 @@
+<!doctype html><html lang="vi"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<!-- Bản nhúng cho popup "thiết bị ở gần" trong app iOS: chỉ giữ khung vẽ, nền trong suốt.
+     Các nút ẩn giữ nguyên id mà app.js (bản gốc từ peacock-watch-3d.zip) tham chiếu. -->
+<style>html,body{margin:0;height:100%;background:transparent;overflow:hidden}#stage{position:absolute;inset:0;touch-action:none}</style>
+<div id="stage"></div>
+<button id="auto" hidden></button><button id="front" hidden></button><button id="back" hidden></button><div id="error" hidden></div>
+<script>window.WATCH_ZOOM=10</script>
+<script type="module" src="./app.js"></script>
+</html>

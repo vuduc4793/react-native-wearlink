@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>SmartWear Lab — Editorial Brutalism (Roulette #1)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js" crossorigin></script>
+<style>
+:root{--bk:#000;--wh:#fff;--bl:#0000EE;--or:#FF433D;--gr:#00A33E;--g1:#9A9A9A;--g2:#3A3A3A;--g3:#1C1C1C;
+  --sans:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;--mono:'Geist Mono',ui-monospace,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+*::-webkit-scrollbar{display:none}*{scrollbar-width:none}
+html,body{background:#fff;color:#000;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.canvas{width:1760px;height:1000px;padding:12px 18px 0;overflow:hidden}
+.mast{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:22px;border-bottom:2px solid #000;padding-bottom:8px}
+.mast h1{font-size:46px;font-weight:900;letter-spacing:-.055em;line-height:.85}
+.mast p{font-size:14px;line-height:1.3;max-width:640px}
+.mast .tag{font-family:var(--mono);font-size:12px;text-align:right;line-height:1.4}
+.mast a{color:#0000EE;text-decoration:underline}
+.row4{display:flex;gap:24px;margin-top:8px}
+.plabel{font-size:13px;font-weight:700;margin-bottom:5px;display:flex;justify-content:space-between;border-bottom:1px solid #000;padding-bottom:3px}
+.plabel span{font-family:var(--mono);font-weight:400;font-size:12px}
+/* ---------- in-phone ---------- */
+.scr{height:100%;display:flex;flex-direction:column;background:#000;color:#fff;font-size:14px}
+.folio{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;padding:6px 14px 6px;border-bottom:1px solid #fff;letter-spacing:.02em}
+.body{flex:1;overflow-y:auto;overflow-x:hidden}
+.hd{font-weight:900;letter-spacing:-.065em;line-height:.8}
+.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--g1);font-weight:500}
+.mono{font-family:var(--mono)}
+.rule{border-top:1px solid #fff}
+.hero{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:10px 14px 12px;border-bottom:1px solid #fff;align-items:end}
+.hero .txt{font-size:14px;line-height:1.3;padding-bottom:4px}
+.hero .txt b{font-weight:800}
+.blk{display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 14px;height:50px;background:var(--bl);color:#fff;font-weight:800;font-size:15px;letter-spacing:.01em;text-transform:uppercase}
+.blk:hover{background:#2323ff}
+.blk[disabled]{background:var(--g3);color:var(--g1);cursor:not-allowed}
+.blk.stop{background:#fff;color:#000}
+.blk small{font-family:var(--mono);font-size:12px;font-weight:400;text-transform:none}
+.chip{display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:700;height:22px;padding:0 6px;flex:none}
+.chip.c01{background:var(--bl);color:#fff}.chip.c02{background:#fff;color:#000}.chip.c03{border:1px dashed var(--g1);color:var(--g1)}
+.st{font-family:var(--mono);font-size:12px;font-weight:700;text-transform:uppercase;white-space:nowrap}
+.st.connected{color:var(--gr)}.st.connecting{color:#fff;animation:blink 1s steps(2) infinite}.st.disconnected{color:var(--g1)}.st.lost,.st.error{color:var(--or)}
+@keyframes blink{50%{opacity:.25}}
+.ch{border-bottom:1px solid #fff;cursor:pointer}
+.ch:hover{background:#0b0b0b}
+.chTop{display:flex;align-items:center;gap:8px;padding:10px 14px 8px}
+.chTop .nm{font-size:22px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.chTop .sub{font-size:12px;color:var(--g1)}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--g2)}
+.grid4>div{padding:6px 8px 7px 14px;border-right:1px solid var(--g2);min-width:0}
+.grid4>div:not(:first-child){padding-left:8px}
+.grid4>div:last-child{border-right:0}
+.v{font-size:17px;font-weight:800;letter-spacing:-.03em;margin-top:2px;white-space:nowrap}
+.v small{font-size:12px;font-weight:500;color:var(--g1);margin-left:2px;letter-spacing:0}
+.v.na{font-size:14px;font-weight:500;color:var(--g1);letter-spacing:0}
+.v.warn{color:var(--or)}
+.chFoot{display:flex;align-items:center;gap:10px;padding:7px 14px 9px;border-top:1px solid var(--g2)}
+.tape{display:flex;align-items:flex-end;gap:2px;height:20px;flex:1;min-width:0}
+.tape i{flex:1;background:var(--g2);height:3px}
+.tape i.on{background:#fff;height:100%}
+.tape.big{height:34px}
+.lnk{font-size:14px;color:#fff;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.lnk:hover{color:#9d9dff}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #fff;flex:none}
+.nav button{height:52px;border-right:1px solid var(--g2);text-align:left;padding:6px 8px;display:flex;flex-direction:column;justify-content:space-between}
+.nav button:last-child{border-right:0}
+.nav b{font-family:var(--mono);font-size:12px;font-weight:700}
+.nav span{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
+.nav button.on{background:var(--bl)}
+.nav button:not(.on):hover{background:var(--g3)}
+.grp{display:flex;justify-content:space-between;align-items:center;padding:6px 14px;background:#fff;color:#000;font-weight:800;font-size:14px;text-transform:uppercase}
+.grp .mono{font-size:12px;font-weight:500;text-transform:none}
+.grp.dim{background:var(--g3);color:var(--g1)}
+.srow{display:grid;grid-template-columns:30px 1fr auto;gap:10px;padding:10px 14px;border-bottom:1px solid var(--g2);cursor:pointer;align-items:start}
+.srow:hover{background:#0b0b0b}
+.box{width:22px;height:22px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.box.on{background:var(--bl);border-color:var(--bl)}
+.box.on:after{content:'';width:8px;height:8px;background:#fff}
+.box.off{border:2px dashed var(--g2);cursor:not-allowed}
+.srow .nm{font-size:18px;font-weight:800;letter-spacing:-.03em}
+.meta{font-family:var(--mono);font-size:12px;color:var(--g1);line-height:1.5;margin-top:2px}
+.srow.dis{cursor:not-allowed}.srow.dis .nm{color:var(--g1)}
+.tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #fff;flex:none}
+.tabs button{padding:8px 10px 7px;text-align:left;border-right:1px solid #fff;display:flex;flex-direction:column;gap:4px}
+.tabs button:last-child{border-right:0}
+.tabs button.on{background:#fff;color:#000}
+.tabs button.on .st.connected{color:#006B28}
+.tabs .t1{display:flex;gap:6px;align-items:center;font-weight:800;font-size:15px;letter-spacing:-.02em}
+.tabs .t2{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:12px}
+.dh{display:grid;grid-template-columns:1fr 92px;border-bottom:1px solid #fff}
+.dh .l{padding:10px 14px 10px;border-right:1px solid #fff}
+.ph{display:flex;align-items:center;justify-content:center;text-align:center;background:#2A2A2A;color:#C8C8C8;font-size:12px;line-height:1.3;padding:6px;font-family:var(--mono)}
+.spec{display:grid;grid-template-columns:146px 1fr 78px;border-bottom:1px solid #fff}
+.spec>div{padding:5px 6px 6px 14px;border-right:1px solid var(--g2);border-bottom:1px solid var(--g2);min-width:0}
+.spec>div:not(:nth-child(3n+1)){padding-left:8px}
+.spec>div:nth-child(3n){border-right:0}
+.spec>div:nth-child(n+4){border-bottom:0}
+.spec .mono{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.caps{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #fff}
+.cap{padding:6px 6px 7px 8px;border-right:1px solid var(--g2);border-bottom:1px solid var(--g2);text-align:left;min-height:56px;display:flex;flex-direction:column;justify-content:space-between}
+.cap:nth-child(4n){border-right:0}
+.cap:nth-child(n+5){border-bottom:0}
+.cap .cl{font-size:12px;font-weight:700;line-height:1.15}
+.cap .cv{font-size:14px;font-weight:800;letter-spacing:-.02em;margin-top:3px}
+.cap .cv.na{font-weight:500;color:var(--g1);font-size:12px;letter-spacing:0}
+.cap.on{background:var(--bl)}
+.cap.on .cv.na{color:#D6D6FF}
+.cap:not(.on):hover{background:var(--g3)}
+.cap.sum{grid-column:span 1;cursor:default;background:#0b0b0b}
+.live{padding:8px 14px 10px;border-bottom:1px solid #fff}
+.bigv{display:flex;align-items:flex-end;gap:8px;margin:8px 0 8px}
+.log{padding:6px 14px 8px}
+.lr{padding:4px 0 5px;border-bottom:1px solid var(--g3)}
+.lr .hx{font-family:var(--mono);font-size:12px;white-space:nowrap;color:#fff}
+.lr .hx.none{color:var(--g1)}
+.lr .mt{font-family:var(--mono);font-size:12px;color:var(--g1)}
+.mx{width:100%;border-collapse:collapse}
+.mx th{font-size:12px;font-weight:500;color:var(--g1);text-transform:uppercase;text-align:left;padding:6px 6px;border-bottom:1px solid #fff;letter-spacing:.03em}
+.mx td{padding:8px 6px;border-bottom:1px solid var(--g2);vertical-align:top;font-size:14px}
+.mx th:first-child,.mx td:first-child{padding-left:14px}
+.mx td+td,.mx th+th{border-left:1px solid var(--g2)}
+.mx .num{font-weight:800;font-size:16px;letter-spacing:-.03em;white-space:nowrap}
+.mx .na{color:var(--g1);font-size:12px;font-family:var(--mono)}
+.slots{display:grid;grid-template-columns:repeat(7,1fr);gap:0;border:1px solid #fff;margin:0 14px 12px}
+.slots div{height:34px;border-right:1px solid #fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--g1)}
+.slots div:last-child{border-right:0}
+.slots .s01{background:var(--bl);color:#fff}.slots .s02{background:#fff;color:#000}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #fff;margin:0 14px}
+.seg button{height:38px;font-size:14px;font-weight:700;border-right:1px solid #fff}
+.seg button:last-child{border-right:0}
+.seg button.on{background:#fff;color:#000}
+.note{font-size:12px;color:var(--g1);line-height:1.45;padding:8px 14px 10px}
+.note b{color:#fff;font-weight:600}
+.sect{display:flex;justify-content:space-between;align-items:baseline;padding:10px 14px 6px}
+.sect h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useContext, createContext } = React;
+
+/* ===== AndroidFrame (verbatim from huashu-design/assets/android_frame.jsx) ===== */
+const androidFrameStyles = {
+  wrapper: { display: 'inline-block', padding: 10, background: '#1a1a1a', borderRadius: 44, boxShadow: '0 0 0 2px #2a2a2a, 0 20px 60px rgba(0,0,0,0.3)', position: 'relative' },
+  screen: { position: 'relative', borderRadius: 36, overflow: 'hidden', background: '#fff' },
+  statusBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', fontSize: 14, fontWeight: 500, fontFamily: 'Roboto, -apple-system, sans-serif', zIndex: 20, pointerEvents: 'none' },
+  punchHole: { position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', width: 14, height: 14, background: '#000', borderRadius: '50%', zIndex: 30 },
+  statusIcons: { display: 'flex', alignItems: 'center', gap: 6 },
+  batteryText: { fontSize: 11, fontWeight: 600, marginLeft: 2 },
+  content: { position: 'absolute', top: 32, left: 0, right: 0, bottom: 24, overflow: 'auto' },
+  navBar: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 60, zIndex: 10 },
+  navButton: { width: 36, height: 4, background: 'rgba(0,0,0,0.3)', borderRadius: 999 },
+};
+function AndroidFrame({ children, width = 412, height = 892, time = '9:41', battery = 100, darkMode = false, navStyle = 'gesture' }) {
+  const textColor = darkMode ? '#fff' : '#1a1a1a';
+  return (
+    <div style={androidFrameStyles.wrapper}>
+      <div style={{ ...androidFrameStyles.screen, width, height, background: darkMode ? '#000' : '#fff' }}>
+        <div style={{ ...androidFrameStyles.statusBar, color: textColor }}>
+          <span>{time}</span>
+          <div style={androidFrameStyles.statusIcons}>
+            <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2" height="4" rx="0.5" /><rect x="4" y="4" width="2" height="6" rx="0.5" /><rect x="8" y="2" width="2" height="8" rx="0.5" /><rect x="12" y="0" width="2" height="10" rx="0.5" /></svg>
+            <svg width="14" height="10" viewBox="0 0 14 10" fill="none"><path d="M7 9a1 1 0 100-2 1 1 0 000 2z" fill="currentColor" /><path d="M3 6a5 5 0 018 0" stroke="currentColor" strokeWidth="1.2" /><path d="M0.5 3.5a11 11 0 0113 0" stroke="currentColor" strokeWidth="1.2" opacity="0.6" /></svg>
+            <div style={{ width: 22, height: 10, border: '1.5px solid currentColor', borderRadius: 2, padding: 1, position: 'relative' }}>
+              <div style={{ width: `${battery}%`, height: '100%', background: 'currentColor', borderRadius: 1 }} />
+            </div>
+            <span style={androidFrameStyles.batteryText}>{battery}%</span>
+          </div>
+        </div>
+        <div style={androidFrameStyles.punchHole} />
+        <div style={androidFrameStyles.content}>{children}</div>
+        {navStyle === 'gesture' && (
+          <div style={androidFrameStyles.navBar}>
+            <div style={{ ...androidFrameStyles.navButton, width: 100, height: 4, background: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)' }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ===== REAL DATA (spec §4) — không bịa số ===== */
+const DEV = {
+  r09: { id: 'r09', ch: '01', title: 'R09', ble: 'R09_8404', model: 'Colmi R09', kind: 'nhẫn', sdk: 'QRing',
+    mac: '30:32:43:31:84:04', hw: 'RT09_V3.1', fw: 'RT09_3.10.22_260420', rssi: '−70…−82', ph: 'ảnh R09',
+    caps: ['hr', 'spo2', 'temp', 'stress', 'hrv', 'sleep', 'gesture'], extra: 'temp' },
+  hs: { id: 'hs', ch: '02', title: 'HS500A', ble: null, model: 'HS500A', kind: 'chưa rõ loại', sdk: 'QRing',
+    mac: '32:35:45:37:4E:00', hw: 'HS500A_V1.0', fw: 'HS500A_1.00.05_260725', rssi: null, ph: 'ảnh HS500A',
+    caps: ['hr', 'spo2', 'bp', 'stress', 'hrv', 'cycle'], extra: 'bp', notes: 'không màn hình · không nhiệt độ' },
+};
+const COROS = { ble: 'COROS PACE 3 8E1086', mac: 'F7:AF:2F:22:09:90', reason: 'Phát FEE7 · chưa có SDK' };
+const CAP = {
+  hr: { l: 'Nhịp tim', u: 'bpm' }, spo2: { l: 'SpO2', u: '%' }, temp: { l: 'Nhiệt độ', u: '°C' },
+  stress: { l: 'Stress', u: '' }, hrv: { l: 'HRV', u: '' }, sleep: { l: 'Giấc ngủ', u: '' },
+  gesture: { l: 'Cử chỉ chạm', u: '' }, bp: { l: 'Huyết áp', u: '' }, cycle: { l: 'Chu kỳ kinh nguyệt', u: '' },
+};
+// Chỉ các phép đo có số thật mới được mô phỏng
+const SIM = { r09: { hr: 50, spo2: 52, temp: 52 }, hs: { hr: 3 } }; // số gói 0,5 s (~25 s / ~26 s)
+const HR_SEQ = [79, 80, 81, 82, 81, 80];
+const SPO2_SEQ = [97, 98, 99, 98];
+const IDS = ['r09', 'hs'];
+const TAPE_N = 40;
+const hx = b => b.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
+// 69 01 00 <HR> 00 00 FA 02 00…00 <sum&FF>  — kiểm chứng: HR 79 → B5 như gói mẫu thật
+function hrPacket(v) { const b = [0x69, 0x01, 0x00, v, 0, 0, 0xFA, 0x02, 0, 0, 0, 0, 0, 0, 0]; return hx([...b, b.reduce((a, x) => a + x, 0) & 255]); }
+const pad2 = n => String(n).padStart(2, '0');
+const STL = { connected: 'Đã kết nối', connecting: 'Đang kết nối', disconnected: 'Đã ngắt', lost: 'Mất kết nối', error: 'Lỗi' };
+
+const init = () => ({
+  conn: { r09: 'connected', hs: 'connected' },
+  last: { r09: { hr: '79–82', spo2: '97–99', temp: '36,6' }, hs: { hr: 'Chưa đeo' } },
+  batt: { r09: 19, hs: null },
+  meas: { r09: null, hs: null },
+  tape: { r09: Array(TAPE_N).fill(0), hs: Array(TAPE_N).fill(0) },
+  log: {
+    r09: [{ n: 3, hex: '6A 0B A6 …', note: 'stop nhiệt độ → 36,6 °C' }, { n: 2, hex: hrPacket(79), note: 'HR 79 bpm' }, { n: 1, hex: '73 0C 13', note: 'notify pin → 19 %' }],
+    hs: [{ n: 1, hex: null, note: 'Nhịp tim → “Chưa đeo”' }],
+  },
+  seq: { r09: 3, hs: 1 },
+});
+
+function tick(s) {
+  const n = { ...s, meas: { ...s.meas }, tape: { ...s.tape }, log: { ...s.log }, last: { ...s.last }, seq: { ...s.seq } };
+  IDS.forEach(id => {
+    let pkt = 0;
+    const m = s.meas[id];
+    const push = (hex, note) => { n.seq[id] += 1; n.log[id] = [{ n: n.seq[id], hex, note }, ...n.log[id]].slice(0, 40); };
+    if (m && s.conn[id] === 'connected') {
+      const i = m.i + 1; const dur = SIM[id][m.metric]; let val = m.val;
+      n.last[id] = { ...n.last[id] };
+      if (id === 'r09') {
+        pkt = 1;
+        if (m.metric === 'hr') { val = HR_SEQ[Math.floor(i / 3) % HR_SEQ.length]; push(hrPacket(val), `HR ${val} bpm`); }
+        if (m.metric === 'spo2') { val = SPO2_SEQ[Math.floor(i / 4) % SPO2_SEQ.length]; push(null, `SpO2 ${val} % · hex chưa ghi mẫu`); }
+        if (m.metric === 'temp') { val = null; }
+      }
+      if (i >= dur) {
+        if (id === 'r09') {
+          if (m.metric === 'temp') { val = '36,6'; push('6A 0B A6 …', 'stop nhiệt độ → 36,6 °C'); }
+          n.last[id][m.metric] = String(val);
+        } else {
+          const r = m.metric === 'hr' ? 'Chưa đeo' : 'chưa có số thật';
+          n.last[id][m.metric] = r; push(null, `${CAP[m.metric].l} → “${r}”`);
+        }
+        n.meas[id] = null;
+      } else n.meas[id] = { ...m, i, val };
+    } else if (m) n.meas[id] = null;
+    n.tape[id] = [...s.tape[id].slice(1), pkt];
+  });
+  return n;
+}
+
+const Store = createContext(null);
+function useStore() { return useContext(Store); }
+
+/* ===== shared bits ===== */
+const Chip = ({ id }) => <span className={'chip c' + (id === 'coros' ? '03' : DEV[id].ch)}>CH{id === 'coros' ? '—' : DEV[id].ch}</span>;
+const St = ({ v }) => <span className={'st ' + v}>■ {STL[v]}</span>;
+const Tape = ({ data, big }) => <div className={'tape' + (big ? ' big' : '')}>{data.map((x, i) => <i key={i} className={x ? 'on' : ''} />)}</div>;
+function Val({ v, u, warn }) {
+  if (v == null || v === '') return <div className="v na">chưa đo</div>;
+  if (/[a-zà-ỹ]/i.test(v) && !u) return <div className={'v ' + (warn ? 'warn' : 'na')} style={{ fontSize: 14 }}>{v}</div>;
+  if (/Chưa|chưa/.test(v)) return <div className="v warn" style={{ fontSize: 14 }}>{v}</div>;
+  return <div className="v">{v}{u && <small>{u}</small>}</div>;
+}
+const NAV = [['fleet', 'A', 'Tổng quan'], ['scan', 'B', 'Quét'], ['detail', 'C', 'Thiết bị'], ['monitor', 'D', 'Song song']];
+function Screen({ code, title, right, nav, children, foot }) {
+  return (
+    <div className="scr">
+      <div className="folio"><span>SMARTWEAR LAB · {code} — {title.toUpperCase()}</span><span>{right}</span></div>
+      <div className="body">{children}</div>
+      {foot}
+      <div className="nav">
+        {NAV.map(([k, c, l]) => (
+          <button key={k} className={nav.tab === k ? 'on' : ''} onClick={() => nav.go(k)} data-nav={k}><b>{c}</b><span>{l}</span></button>
+        ))}
+      </div>
+    </div>
+  );
+}
+function liveVal(s, id) { const m = s.meas[id]; if (!m) return null; return m.metric === 'temp' ? '…' : (m.val ?? '…'); }
+
+/* ===== A. FLEET ===== */
+function Fleet({ nav }) {
+  const { s, act } = useStore();
+  const nConn = IDS.filter(id => s.conn[id] === 'connected').length;
+  const anyLive = IDS.some(id => s.meas[id]);
+  return (
+    <Screen code="A" title="Tổng quan" right={`GATT ${nConn}/7`} nav={nav}>
+      <div className="hero">
+        <div className="hd" style={{ fontSize: 132 }}>{pad2(nConn)}</div>
+        <div className="txt"><b>kênh đang nối</b> trong giới hạn ~7 kết nối GATT đồng thời của Android. Mỗi kênh phát một gói đo mỗi ~0,5 s. <span style={{ color: 'var(--g1)' }}>1 thiết bị quét thấy, chưa hỗ trợ.</span></div>
+      </div>
+      <button className={'blk' + (anyLive ? ' stop' : '')} onClick={() => anyLive ? act.stopAll() : act.bulk('hr')} data-t="bulk-a">
+        <span>{anyLive ? 'Dừng mọi phép đo' : 'Đo đồng loạt · Nhịp tim'}</span><small>{anyLive ? 'đang chạy' : 'R09 + HS500A'}</small>
+      </button>
+      {IDS.map(id => <Channel key={id} id={id} nav={nav} />)}
+      <div className="ch" style={{ cursor: 'default' }} onClick={() => nav.go('scan')}>
+        <div className="chTop"><Chip id="coros" /><span className="nm" style={{ color: 'var(--g1)', fontSize: 18 }}>COROS PACE 3</span><span style={{ flex: 1 }} /><span className="st disconnected">Chưa hỗ trợ</span></div>
+        <div className="meta" style={{ padding: '0 14px 10px' }}>{COROS.ble} · {COROS.mac}<br />{COROS.reason}</div>
+      </div>
+    </Screen>
+  );
+}
+function Channel({ id, nav }) {
+  const { s, act } = useStore();
+  const d = DEV[id], c = s.conn[id], m = s.meas[id], last = s.last[id];
+  const lv = liveVal(s, id);
+  const hrNow = m && m.metric === 'hr' ? (lv === '…' ? '…' : String(lv)) : last.hr;
+  const ex = d.extra;
+  const exNow = m && m.metric === ex ? String(lv) : last[ex];
+  return (
+    <div className="ch" onClick={() => nav.open(id)} data-dev={id}>
+      <div className="chTop">
+        <Chip id={id} /><span className="nm">{d.title}</span>
+        <span className="sub mono">{d.ble ? d.ble : 'BLE: chưa ghi'}</span>
+        <span style={{ flex: 1 }} /><St v={c} />
+      </div>
+      <div className="grid4">
+        <div><div className="lbl">Pin</div>{s.batt[id] != null ? <Val v={String(s.batt[id])} u="%" /> : <div className="v na">—</div>}</div>
+        <div><div className="lbl">RSSI</div>{d.rssi ? <Val v={d.rssi} /> : <div className="v na">—</div>}</div>
+        <div><div className="lbl">Nhịp tim</div><Val v={hrNow} u="bpm" warn /></div>
+        <div><div className="lbl">{CAP[ex].l}</div><Val v={exNow} u={CAP[ex].u} /></div>
+      </div>
+      <div className="chFoot">
+        <Tape data={s.tape[id].slice(-24)} />
+        <span className="mono" style={{ fontSize: 12, color: m ? '#fff' : 'var(--g1)', width: 92 }}>{m ? `● ${CAP[m.metric].l} ${m.i}/${SIM[id][m.metric]}` : 'nghỉ · 0 gói'}</span>
+        <button className="lnk" onClick={e => { e.stopPropagation(); act.toggle(id); }} data-t={'conn-' + id}>{c === 'connected' ? 'Ngắt' : c === 'connecting' ? '…' : 'Kết nối'}</button>
+      </div>
+    </div>
+  );
+}
+
+/* ===== B. SCAN ===== */
+function Scan({ nav }) {
+  const { s, act } = useStore();
+  const [sel, setSel] = useState({ r09: true, hs: true });
+  const [sec, setSec] = useState(0);
+  useEffect(() => { const t = setInterval(() => setSec(x => x + 1), 1000); return () => clearInterval(t); }, []);
+  const picked = IDS.filter(id => sel[id]);
+  const used = IDS.filter(id => s.conn[id] === 'connected' && !sel[id]).length + picked.length;
+  return (
+    <Screen code="B" title="Quét & thêm" right={<span className="st connecting" style={{ fontWeight: 400 }}>● QUÉT {pad2(sec % 60)} s</span>} nav={nav}
+      foot={<button className="blk" disabled={!picked.length} onClick={() => act.connectMany(picked)} data-t="connect-many"><span>Kết nối song song ({picked.length})</span><small>GATT sau khi nối: {used}/7</small></button>}>
+      <div className="hero" style={{ gridTemplateColumns: 'auto 1fr' }}>
+        <div className="hd" style={{ fontSize: 112 }}>03</div>
+        <div className="txt"><b>thiết bị phát quảng bá.</b> Nhóm theo SDK; chọn nhiều cái rồi nối song song. <button className="lnk" onClick={() => setSec(0)}>Quét lại</button></div>
+      </div>
+      <div className="grp"><span>QRing · 2</span><span className="mono">sdks/qring/android</span></div>
+      {IDS.map(id => {
+        const d = DEV[id];
+        return (
+          <div key={id} className="srow" onClick={() => setSel(x => ({ ...x, [id]: !x[id] }))} data-scan={id}>
+            <div className={'box' + (sel[id] ? ' on' : '')} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><Chip id={id} /><span className="nm">{d.ble || d.title}</span></div>
+              <div className="meta">{d.mac}<br />{d.hw} / {d.fw}{!d.ble && <><br />BLE name: chưa ghi</>}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}><St v={s.conn[id]} /><div className="meta">RSSI {d.rssi ? d.rssi : '—'}</div></div>
+          </div>
+        );
+      })}
+      <div className="grp dim"><span>Chưa hỗ trợ · 1</span><span className="mono">không có SDK</span></div>
+      <div className="srow dis" title="Chưa có SDK cho thiết bị này">
+        <div className="box off" />
+        <div><div className="nm">{COROS.ble}</div><div className="meta">{COROS.mac}<br />{COROS.reason}</div></div>
+        <div className="st disconnected">Không chọn được</div>
+      </div>
+      <div className="note">Thiết bị loại mới chỉ cần khai báo <b>capability</b> trong SDK riêng (dựng trên <span className="mono">sdks/core</span>) là có thẻ, ô chức năng và luồng đo — không cần màn hình riêng.</div>
+    </Screen>
+  );
+}
+
+/* ===== C. DETAIL ===== */
+function Detail({ nav }) {
+  const { s, act } = useStore();
+  const id = nav.dev, d = DEV[id], m = s.meas[id];
+  const [metric, setMetric] = useState(d.caps[0]);
+  useEffect(() => { setMetric(m ? m.metric : DEV[id].caps[0]); }, [id]);
+  useEffect(() => { if (m) setMetric(m.metric); }, [m && m.metric]);
+  const canSim = SIM[id][metric] != null;
+  const running = m && m.metric === metric;
+  const lv = running ? liveVal(s, id) : null;
+  const shown = running ? lv : s.last[id][metric];
+  const isText = shown != null && /[a-zà-ỹ]/i.test(String(shown));
+  const dur = SIM[id][metric];
+  return (
+    <Screen code="C" title="Thiết bị" right={`${d.sdk} SDK`} nav={nav}>
+      <div className="tabs">
+        {IDS.map(k => {
+          const mk = s.meas[k]; const v = liveVal(s, k);
+          return (
+            <button key={k} className={k === id ? 'on' : ''} onClick={() => nav.open(k)} data-tab={k}>
+              <span className="t1"><Chip id={k} />{DEV[k].title}</span>
+              <span className="t2"><St v={s.conn[k]} /><span>{mk ? `${CAP[mk.metric].l} ${v}` : ''}</span></span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="dh">
+        <div className="l">
+          <div className="hd" style={{ fontSize: d.title.length > 3 ? 60 : 84 }}>{d.title}</div>
+          <div style={{ fontSize: 14, marginTop: 8 }}>{d.model} · {d.kind}{d.notes ? <span style={{ color: 'var(--g1)' }}> · {d.notes}</span> : ''}</div>
+        </div>
+        <div className="ph">{d.ph}<br />(placeholder)</div>
+      </div>
+      <div className="spec">
+        <div><div className="lbl">MAC</div><div className="mono">{d.mac}</div></div>
+        <div><div className="lbl">FW</div><div className="mono" title={d.fw}>{d.fw}</div></div>
+        <div><div className="lbl">Pin</div><div className="mono">{s.batt[id] != null ? '23→19 %' : '—'}</div></div>
+        <div><div className="lbl">BLE name</div><div className="mono">{d.ble || 'chưa ghi'}</div></div>
+        <div><div className="lbl">HW</div><div className="mono">{d.hw}</div></div>
+        <div><div className="lbl">RSSI dBm</div><div className="mono">{d.rssi || '—'}</div></div>
+      </div>
+      <div className="caps">
+        {d.caps.map(k => {
+          const v = m && m.metric === k ? liveVal(s, id) : s.last[id][k];
+          const txt = v == null ? null : String(v);
+          return (
+            <button key={k} className={'cap' + (metric === k ? ' on' : '')} onClick={() => setMetric(k)} data-cap={k}>
+              <span className="cl">{CAP[k].l}{k === 'sleep' ? ' (mới)' : ''}</span>
+              {txt == null ? <span className="cv na">chưa đo</span>
+                : /[a-zà-ỹ]/i.test(txt) ? <span className="cv" style={{ color: metric === k ? '#fff' : 'var(--or)', fontSize: 13 }}>{txt}</span>
+                : <span className="cv">{txt}<span style={{ fontWeight: 500, fontSize: 12 }}> {CAP[k].u}</span></span>}
+            </button>
+          );
+        })}
+        {Array.from({ length: 8 - d.caps.length }).map((_, i) => (
+          <div key={i} className="cap sum"><span className="cl" style={{ color: 'var(--g1)' }}>{i === 0 ? `${d.caps.length} khả năng` : ''}</span><span className="cv na">{i === 0 ? 'từ bảng capability' : ''}</span></div>
+        ))}
+      </div>
+      <div className="live">
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span className="lbl" style={{ color: '#fff' }}>Đo trực tiếp · {CAP[metric].l}</span>
+          <span className="mono" style={{ fontSize: 12, color: 'var(--g1)' }}>{running ? `gói ${m.i}/${dur} · ${(m.i * 0.5).toFixed(1).replace('.', ',')} s` : 'nhịp gói 0,5 s'}</span>
+        </div>
+        <div className="bigv" data-live={id}>
+          {shown == null ? <div className="hd" style={{ fontSize: 88, color: 'var(--g2)' }}>—</div>
+            : isText ? <div className="hd" style={{ fontSize: 44, color: 'var(--or)', letterSpacing: '-.04em', lineHeight: 1 }}>{shown}</div>
+            : <><div className="hd" style={{ fontSize: String(shown).includes('–') ? 64 : 88, whiteSpace: 'nowrap' }}>{shown}</div><div style={{ fontSize: 16, fontWeight: 700, paddingBottom: 4 }}>{CAP[metric].u}</div></>}
+          <span style={{ flex: 1 }} />
+          <span className="lbl" style={{ textAlign: 'right', paddingBottom: 4, whiteSpace: 'nowrap' }}>{running ? 'đang nhận' : shown == null ? 'chưa có số thật' : 'đo gần nhất'}</span>
+        </div>
+        <Tape data={s.tape[id]} big />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+        <button className={'blk' + (running ? ' stop' : '')} style={{ fontSize: 14 }} disabled={!canSim || s.conn[id] !== 'connected'} onClick={() => running ? act.stop(id) : act.start(id, metric)} data-t="start">
+          <span>{running ? 'Dừng đo' : canSim ? 'Bắt đầu đo' : 'Chưa mô phỏng'}</span>
+        </button>
+        <button className="blk" style={{ fontSize: 14, borderLeft: '1px solid #000' }} disabled title="Sắp có"><span>Lịch sử</span><small>sắp có</small></button>
+      </div>
+      <div className="log">
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}><span className="lbl" style={{ color: '#fff' }}>Log gói thô · hex</span><span className="mono" style={{ fontSize: 12, color: 'var(--g1)' }}>{s.log[id].length} dòng</span></div>
+        {s.log[id].slice(0, 8).map(r => (
+          <div key={r.n} className="lr">
+            <div className={'hx' + (r.hex ? '' : ' none')}>{r.hex || '— không ghi gói'}</div>
+            <div className="mt">#{String(r.n).padStart(3, '0')} · {r.note}</div>
+          </div>
+        ))}
+      </div>
+    </Screen>
+  );
+}
+
+/* ===== D. MONITOR ===== */
+function Monitor({ nav }) {
+  const { s, act } = useStore();
+  const [metric, setMetric] = useState('hr');
+  const conn = IDS.filter(id => s.conn[id] === 'connected');
+  const pps = id => { const t = s.tape[id].slice(-4); return (t.reduce((a, b) => a + b, 0) / 2).toFixed(1).replace('.', ','); };
+  const anyLive = IDS.some(id => s.meas[id]);
+  const who = IDS.map(id => ({ id, ok: DEV[id].caps.includes(metric) }));
+  return (
+    <Screen code="D" title="Song song" right="bảng khả thi" nav={nav}>
+      <div className="hero" style={{ borderBottom: 0, paddingBottom: 8 }}>
+        <div className="hd" style={{ fontSize: 120 }}>{conn.length}<span style={{ color: 'var(--g1)' }}>/7</span></div>
+        <div className="txt"><b>khe GATT đang dùng.</b> Android thường giới hạn ~7 kết nối đồng thời — còn {7 - conn.length} khe.</div>
+      </div>
+      <div className="slots">
+        {Array.from({ length: 7 }).map((_, i) => { const id = conn[i]; return <div key={i} className={id ? 's' + DEV[id].ch : ''}>{id ? DEV[id].ch : '·'}</div>; })}
+      </div>
+      <table className="mx">
+        <thead><tr><th>Thiết bị</th><th>RSSI</th><th>Gói/s</th><th>Lỗi</th><th>Trễ</th></tr></thead>
+        <tbody>
+          {IDS.map(id => (
+            <tr key={id} style={{ cursor: 'pointer' }} onClick={() => nav.open(id)}>
+              <td><div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><Chip id={id} /><b>{DEV[id].title}</b></div><div style={{ marginTop: 4 }}><St v={s.conn[id]} /></div></td>
+              <td>{DEV[id].rssi ? <span className="num" style={{ fontSize: 14 }}>{DEV[id].rssi}</span> : <span className="na">—</span>}</td>
+              <td><span className="num">{pps(id)}</span></td>
+              <td><span className="na">chưa đo</span></td>
+              <td><span className="na">chưa đo</span></td>
+            </tr>
+          ))}
+          <tr style={{ color: 'var(--g1)' }}><td><div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><Chip id="coros" />COROS</div></td><td colSpan={4}><span className="na">không nối · {COROS.reason}</span></td></tr>
+        </tbody>
+      </table>
+      <div className="sect"><h3>Kênh · 20 s gần nhất</h3><span className="mono" style={{ fontSize: 12, color: 'var(--g1)' }}>1 vạch = 0,5 s</span></div>
+      {IDS.map(id => (
+        <div key={id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '0 14px 8px' }}><Chip id={id} /><Tape data={s.tape[id]} big /></div>
+      ))}
+      <div className="sect" style={{ borderTop: '1px solid #fff', marginTop: 4 }}><h3>Đo đồng loạt</h3><span className="mono" style={{ fontSize: 12, color: 'var(--g1)' }}>theo capability</span></div>
+      <div className="seg">{['hr', 'spo2', 'temp'].map(k => <button key={k} className={metric === k ? 'on' : ''} onClick={() => setMetric(k)} data-bm={k}>{CAP[k].l}</button>)}</div>
+      <div style={{ padding: '8px 14px 10px', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+        {who.map(w => <span key={w.id} className="mono" style={{ fontSize: 12, color: w.ok ? '#fff' : 'var(--g1)', textDecoration: w.ok ? 'none' : 'line-through' }}>{DEV[w.id].title} {w.ok ? '→ tham gia' : '→ bỏ qua, không hỗ trợ'}</span>)}
+      </div>
+      <button className={'blk' + (anyLive ? ' stop' : '')} onClick={() => anyLive ? act.stopAll() : act.bulk(metric)} data-t="bulk-d"><span>{anyLive ? 'Dừng tất cả' : `Đo đồng loạt · ${CAP[metric].l}`}</span><small>{who.filter(w => w.ok).length} thiết bị</small></button>
+      <div className="note"><b>Gói/s</b> đếm từ luồng mô phỏng theo nhịp 0,5 s đã quan sát (số minh hoạ). <b>Lỗi</b> và <b>độ trễ</b>: chưa đo — cần phiên thử ≥ 3 thiết bị cùng lúc.</div>
+    </Screen>
+  );
+}
+
+/* ===== phone + app ===== */
+function Phone({ initial }) {
+  const [tab, setTab] = useState(initial);
+  const [dev, setDev] = useState('r09');
+  const nav = { tab, dev, go: setTab, open: id => { setDev(id); setTab('detail'); } };
+  const { s } = useStore();
+  const S = { fleet: Fleet, scan: Scan, detail: Detail, monitor: Monitor }[tab];
+  return <AndroidFrame width={393} height={851} darkMode time="9:41" battery={s.batt.r09}><S nav={nav} /></AndroidFrame>;
+}
+const SCREENS = [['fleet', 'A — Tổng quan / Fleet', 'kênh sống · đo đồng loạt'], ['scan', 'B — Quét & thêm', 'nhóm theo SDK · chọn nhiều'], ['detail', 'C — Chi tiết thiết bị', 'capability → ô chức năng'], ['monitor', 'D — Giám sát song song', 'GATT 7 khe · ma trận']];
+
+function App() {
+  const [s, setS] = useState(init);
+  const timers = useRef([]);
+  useEffect(() => { const t = setInterval(() => setS(tick), 500); return () => clearInterval(t); }, []);
+  const setConn = (id, v) => setS(x => ({ ...x, conn: { ...x.conn, [id]: v } }));
+  const connectLater = (id, ms) => { setConn(id, 'connecting'); timers.current.push(setTimeout(() => setConn(id, 'connected'), ms)); };
+  const act = {
+    start: (id, metric) => setS(x => x.conn[id] !== 'connected' || !SIM[id][metric] ? x : ({ ...x, meas: { ...x.meas, [id]: { metric, i: 0, val: null } } })),
+    stop: id => setS(x => ({ ...x, meas: { ...x.meas, [id]: null } })),
+    stopAll: () => setS(x => ({ ...x, meas: { r09: null, hs: null } })),
+    bulk: metric => setS(x => {
+      const meas = { ...x.meas };
+      IDS.forEach(id => { if (x.conn[id] === 'connected' && DEV[id].caps.includes(metric)) meas[id] = { metric, i: 0, val: null }; });
+      return { ...x, meas };
+    }),
+    toggle: id => { if (s.conn[id] === 'connected') setS(x => ({ ...x, conn: { ...x.conn, [id]: 'disconnected' }, meas: { ...x.meas, [id]: null } })); else if (s.conn[id] !== 'connecting') connectLater(id, 1400); },
+    connectMany: ids => ids.forEach((id, i) => { setS(x => ({ ...x, meas: { ...x.meas, [id]: null } })); connectLater(id, 1100 + i * 700); }),
+  };
+  return (
+    <Store.Provider value={{ s, act }}>
+      <div className="canvas">
+        <div className="mast">
+          <h1>SmartWear Lab</h1>
+          <p>App demo nội bộ đánh giá bộ SDK đa thiết bị đeo. Bốn màn A–D chạy chung một trạng thái: bấm <b>Đo đồng loạt</b> ở một máy, các máy khác cùng thấy kênh phát gói. Số đo lấy từ phiên thật với R09; ô không có số ghi “chưa đo”.</p>
+          <div className="tag">ROULETTE #1 · EDITORIAL BRUTALISM<br />Redmi Note 7 Pro · 393×851 dp · dark</div>
+        </div>
+        <div className="row4">
+          {SCREENS.map(([k, l, sub]) => (
+            <div key={k} data-phone={k}>
+              <div className="plabel">{l}<span>{sub}</span></div>
+              <Phone initial={k} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </Store.Provider>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

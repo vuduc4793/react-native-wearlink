@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>SmartWear Lab — Apple Health / Fitness (dark)</title>
+<!-- Font: SF Pro is not licensed for Android, so Inter (body) + Inter Tight (numerals/titles) substitute it. Mono only in "Chi tiết kỹ thuật". -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js" crossorigin></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#0A0A0B;color:#fff;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{width:1760px;height:1000px;overflow:hidden}
+  .num{font-family:"Inter Tight",Inter,sans-serif;font-feature-settings:"tnum" 1,"cv11" 1;letter-spacing:-0.02em}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  .press{transition:transform .18s ease,opacity .18s ease}
+  .press:active{transform:scale(.97)}
+  .scroll{scrollbar-width:none}
+  .scroll::-webkit-scrollbar{display:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes breathe{0%,100%{opacity:.35;transform:scale(.92)}50%{opacity:.8;transform:scale(1)}}
+  @keyframes ripple{0%{transform:scale(.55);opacity:.5}100%{transform:scale(1.35);opacity:0}}
+  .spin{animation:spin 1s linear infinite}
+  .breathe{animation:breathe 2.4s ease-in-out infinite}
+  .ring-arc{transition:stroke-dashoffset .5s linear}
+  .bar{transition:height .35s ease, background .35s ease}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useReducer } = React;
+
+/* ---------- AndroidFrame (copied verbatim from huashu-design/assets/android_frame.jsx) ---------- */
+const androidFrameStyles = {
+  wrapper: { display: 'inline-block', padding: 10, background: '#1a1a1a', borderRadius: 44, boxShadow: '0 0 0 2px #2a2a2a, 0 20px 60px rgba(0,0,0,0.3)', position: 'relative' },
+  screen: { position: 'relative', borderRadius: 36, overflow: 'hidden', background: '#fff' },
+  statusBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', fontSize: 14, fontWeight: 500, fontFamily: 'Roboto, -apple-system, sans-serif', zIndex: 20, pointerEvents: 'none' },
+  punchHole: { position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', width: 14, height: 14, background: '#000', borderRadius: '50%', zIndex: 30 },
+  statusIcons: { display: 'flex', alignItems: 'center', gap: 6 },
+  batteryText: { fontSize: 11, fontWeight: 600, marginLeft: 2 },
+  content: { position: 'absolute', top: 32, left: 0, right: 0, bottom: 24, overflow: 'auto' },
+  navBar: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 60, zIndex: 10 },
+  navButton: { width: 36, height: 4, background: 'rgba(0,0,0,0.3)', borderRadius: 999 },
+};
+function AndroidFrame({ children, width = 412, height = 892, time = '9:41', battery = 100, darkMode = false, navStyle = 'gesture' }) {
+  const textColor = darkMode ? '#fff' : '#1a1a1a';
+  return (
+    <div style={androidFrameStyles.wrapper}>
+      <div style={{ ...androidFrameStyles.screen, width, height, background: darkMode ? '#000' : '#fff' }}>
+        <div style={{ ...androidFrameStyles.statusBar, color: textColor }}>
+          <span>{time}</span>
+          <div style={androidFrameStyles.statusIcons}>
+            <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2" height="4" rx="0.5" /><rect x="4" y="4" width="2" height="6" rx="0.5" /><rect x="8" y="2" width="2" height="8" rx="0.5" /><rect x="12" y="0" width="2" height="10" rx="0.5" /></svg>
+            <svg width="14" height="10" viewBox="0 0 14 10" fill="none"><path d="M7 9a1 1 0 100-2 1 1 0 000 2z" fill="currentColor" /><path d="M3 6a5 5 0 018 0" stroke="currentColor" strokeWidth="1.2" /><path d="M0.5 3.5a11 11 0 0113 0" stroke="currentColor" strokeWidth="1.2" opacity="0.6" /></svg>
+            <div style={{ width: 22, height: 10, border: '1.5px solid currentColor', borderRadius: 2, padding: 1, position: 'relative' }}>
+              <div style={{ width: `${battery}%`, height: '100%', background: 'currentColor', borderRadius: 1 }} />
+            </div>
+            <span style={androidFrameStyles.batteryText}>{battery}%</span>
+          </div>
+        </div>
+        <div style={androidFrameStyles.punchHole} />
+        <div style={androidFrameStyles.content}>{children}</div>
+        {navStyle === 'gesture' && (
+          <div style={androidFrameStyles.navBar}>
+            <div style={{ ...androidFrameStyles.navButton, width: 100, height: 4, background: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)' }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Tokens ---------- */
+const C = {
+  bg: '#000', card: '#1C1C1E', card2: '#2C2C2E', label: '#FFFFFF', sec: '#A1A1A8', hair: 'rgba(255,255,255,0.08)',
+  green: '#30D158', blue: '#0A84FF', yellow: '#FFD60A',
+};
+/* Health-style category tints (Apple system colours, dark variants) */
+const METRIC = {
+  hr:      { name: 'Nhịp tim',    unit: 'bpm',  color: '#FF375F', icon: 'heart',   live: true },
+  spo2:    { name: 'SpO2',        unit: '%',    color: '#64D2FF', icon: 'drop',    live: true },
+  temp:    { name: 'Nhiệt độ',    unit: '°C',   color: '#FF9F0A', icon: 'temp',    live: true },
+  bp:      { name: 'Huyết áp',    unit: 'mmHg', color: '#FF453A', icon: 'gauge',   live: true },
+  stress:  { name: 'Stress',      unit: '',     color: '#66D4CF', icon: 'stress',  live: true },
+  hrv:     { name: 'HRV',         unit: 'ms',   color: '#FF6482', icon: 'pulse',   live: true },
+  sleep:   { name: 'Giấc ngủ',    unit: '',     color: '#7DA2FF', icon: 'moon',    live: false, note: 'Giao thức mới' },
+  cycle:   { name: 'Chu kỳ',      unit: '',     color: '#FF7AB6', icon: 'cycle',   live: false },
+  gesture: { name: 'Cử chỉ chạm', unit: '',     color: '#B8B8BF', icon: 'tap',     live: false },
+};
+/* Real device data from spec §4 — nothing invented */
+const DEV = {
+  r09: { id: 'r09', name: 'Colmi R09', short: 'R09', kind: 'Nhẫn', sdk: 'QRing', ble: 'R09_8404', mac: '30:32:43:31:84:04',
+    hw: 'RT09_V3.1', fw: 'RT09_3.10.22_260420', battery: 19, batteryNote: '23 % → 19 %, không sạc', rssi: '−70 đến −82 dBm', bars: 2,
+    tint: '#E6C68F', caps: ['hr', 'spo2', 'temp', 'stress', 'hrv', 'sleep', 'gesture'],
+    last: { hr: '79–82', spo2: '97–99', temp: '36,6' }, hero: 'hr' },
+  hs: { id: 'hs', name: 'HS500A', short: 'HS500A', kind: 'Chưa rõ loại', sdk: 'QRing', ble: null, mac: '32:35:45:37:4E:00',
+    hw: 'HS500A_V1.0', fw: 'HS500A_1.00.05_260725', battery: null, rssi: null, bars: null, note: 'Không màn hình · không nhiệt độ',
+    tint: '#A9C2E3', caps: ['hr', 'spo2', 'bp', 'stress', 'hrv', 'cycle'], last: { hr: 'Chưa đeo' }, hero: 'hr' },
+  coros: { id: 'coros', name: 'COROS PACE 3', kind: 'Đồng hồ', sdk: null, ble: 'COROS PACE 3 8E1086', mac: 'F7:AF:2F:22:09:90',
+    reason: 'Phát FEE7, chưa có SDK' },
+};
+const QRING = ['r09', 'hs'];
+const GATT_LIMIT = 7;
+
+/* Measurement scripts — real values only. One step = one 0.5 s packet. */
+const hrHex = v => { const b = [0x69,0x01,0x00,v,0x00,0x00,0xFA,0x02,0,0,0,0,0,0,0]; const s = b.reduce((a, x) => a + x, 0) & 0xFF; return [...b, s].map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' '); };
+const SCRIPT = {
+  r09: {
+    hr:   { kind: 'series', total: 50, seq: [79,80,80,81,82,81,80,80,79,80,81,81,82,80,79,80], summary: '79–82' },
+    spo2: { kind: 'series', total: 52, seq: [97,98,98,99,98,97,98,99,98,98], summary: '97–99' },
+    temp: { kind: 'final',  total: 52, value: '36,6', summary: '36,6' },
+  },
+  hs: { hr: { kind: 'notworn', total: 4 } },
+};
+const vn = n => String(n).replace('.', ',');
+
+function simReducer(st, a) {
+  if (a.type === 'start') {
+    const sc = SCRIPT[a.id] && SCRIPT[a.id][a.metric]; if (!sc) return st;
+    const m = METRIC[a.metric];
+    return { sess: { ...st.sess, [a.id]: { metric: a.metric, t: 0, total: sc.total, vals: [], done: false, result: null } },
+      logs: { ...st.logs, [a.id]: [{ at: '0,0 s', txt: 'Bắt đầu đo ' + m.name.toLowerCase() }, ...st.logs[a.id]].slice(0, 30) } };
+  }
+  if (a.type === 'stop') { const s = st.sess[a.id]; if (!s) return st; return { ...st, sess: { ...st.sess, [a.id]: { ...s, done: true, result: s.result || 'Đã dừng' } } }; }
+  if (a.type === 'tick') {
+    let changed = false; const sess = { ...st.sess }; const logs = { ...st.logs };
+    for (const id in sess) {
+      const s = sess[id]; if (s.done) continue; changed = true;
+      const sc = SCRIPT[id][s.metric]; const t = s.t + 1; const at = vn((t * 0.5).toFixed(1)) + ' s';
+      let vals = s.vals, entry = null, done = t >= s.total, result = null;
+      if (sc.kind === 'series') {
+        const v = sc.seq[(t - 1) % sc.seq.length]; vals = [...vals, v];
+        entry = s.metric === 'hr' ? { at, hex: hrHex(v), txt: 'Nhịp tim ' + v } : { at, txt: 'SpO2 ' + v + ' % · hex chưa ghi lại' };
+        if (done) result = sc.summary;
+      } else if (sc.kind === 'final') {
+        entry = done ? { at, hex: '6A 0B A6 …', txt: 'Dừng đo nhiệt độ · 36,6 °C' } : (t % 4 === 0 ? { at, txt: 'Gói đo nhiệt độ #' + t } : null);
+        if (done) { vals = [sc.value]; result = sc.summary; }
+      } else if (sc.kind === 'notworn') {
+        entry = done ? { at, txt: 'Thiết bị báo: Chưa đeo' } : null; if (done) result = 'Chưa đeo';
+      }
+      sess[id] = { ...s, t, vals, done, result };
+      if (entry) logs[id] = [entry, ...logs[id]].slice(0, 30);
+    }
+    return changed ? { sess, logs } : st;
+  }
+  return st;
+}
+const seedLogs = () => ({
+  r09: [
+    { at: 'trước', hex: '73 0C 13', txt: 'Notify pin · 19 %' },
+    { at: 'trước', hex: '6A 0B A6 …', txt: 'Dừng đo nhiệt độ · 36,6 °C' },
+    { at: 'trước', hex: '69 01 00 4F 00 00 FA 02 00 00 00 00 00 00 00 B5', txt: 'Nhịp tim 79' },
+  ],
+  hs: [{ at: 'trước', txt: 'Đo nhịp tim → Chưa đeo' }],
+});
+
+/* ---------- Icons (UI glyphs only) ---------- */
+const P = {
+  heart: <path d="M12 20.3s-7.4-4.5-9.1-9.3C1.7 7.6 4 4.6 7.2 4.6c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.2 0 5.5 3 4.3 6.4-1.7 4.8-9.1 9.3-9.1 9.3z" fill="currentColor" />,
+  drop: <path d="M12 3.2c3.3 4 6.3 7.6 6.3 11a6.3 6.3 0 0 1-12.6 0c0-3.4 3-7 6.3-11z" fill="currentColor" />,
+  temp: <g fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M10 13.6V5a2 2 0 0 1 4 0v8.6a4 4 0 1 1-4 0z" /><path d="M12 9v6" /></g>,
+  gauge: <g fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 17a8 8 0 1 1 16 0" /><path d="M12 17l4-5" /></g>,
+  stress: <g fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" fill="currentColor" /></g>,
+  pulse: <path d="M2.5 12h4l2.5-6 4 12 2.5-6h6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />,
+  moon: <path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6z" fill="currentColor" />,
+  cycle: <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeDasharray="3.4 2.6" />,
+  tap: <g fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="3" /><path d="M12 3v3M12 18v3M3 12h3M18 12h3" /></g>,
+  chev: <path d="M9 5.5l6.5 6.5L9 18.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />,
+  back: <path d="M15 4.5L7.5 12l7.5 7.5" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />,
+  check: <path d="M5.5 12.5l4.2 4.2L18.5 7.5" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />,
+  play: <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />,
+  stop: <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" />,
+  devices: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><rect x="3" y="5" width="9" height="14" rx="3" /><circle cx="17.5" cy="12" r="3.5" /></g>,
+  plus: <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />,
+  chart: <path d="M5 19v-7M12 19V5M19 19v-10" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />,
+  sync: <g fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3" /><path d="M18 3v4h-4M6 21v-4h4" /></g>,
+  lock: <g fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="5" y="10.5" width="14" height="10" rx="2.5" /><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" /></g>,
+};
+const Icon = ({ n, s = 18, c = 'currentColor', style }) => <svg width={s} height={s} viewBox="0 0 24 24" style={{ color: c, flex: 'none', ...style }}>{P[n]}</svg>;
+
+/* ---------- Small atoms ---------- */
+const Battery = ({ pct }) => pct == null
+  ? <span style={{ color: C.sec, fontSize: 15 }}>Pin chưa đo</span>
+  : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 15, color: C.sec }}>
+      <span style={{ width: 25, height: 12, borderRadius: 4, border: '1.5px solid #8E8E93', padding: 1.5, display: 'inline-block' }}>
+        <span style={{ display: 'block', height: '100%', width: pct + '%', background: pct <= 20 ? '#FF9F0A' : C.green, borderRadius: 1.5 }} />
+      </span>{pct} %</span>;
+const Spinner = ({ s = 16, c = C.sec }) => <span className="spin" style={{ width: s, height: s, borderRadius: '50%', border: `2px solid ${c}`, borderTopColor: 'transparent', display: 'inline-block', flex: 'none' }} />;
+const STATUS = {
+  connected:    { t: 'Đã kết nối',     c: C.green },
+  connecting:   { t: 'Đang kết nối…',  c: C.sec, spin: true },
+  disconnected: { t: 'Đã ngắt',         c: C.sec },
+  idle:         { t: 'Chưa kết nối',    c: C.sec },
+};
+const Status = ({ s }) => { const x = STATUS[s]; return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: x.c, fontSize: 15, fontWeight: 500 }}>{x.spin ? <Spinner s={13} /> : <span style={{ width: 7, height: 7, borderRadius: 9, background: x.c }} />}{x.t}</span>; };
+const Bars = ({ n }) => <span style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2, height: 14 }}>{[0,1,2,3].map(i => <span key={i} style={{ width: 3.5, height: 5 + i * 3, borderRadius: 2, background: n != null && i < n ? '#E5E5EA' : '#48484A' }} />)}</span>;
+const Section = ({ children, right }) => <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '26px 4px 10px' }}><h3 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.01em' }} className="num">{children}</h3>{right}</div>;
+const Card = ({ children, style, onClick }) => <div onClick={onClick} className={onClick ? 'press' : ''} style={{ background: C.card, borderRadius: 22, padding: 16, cursor: onClick ? 'pointer' : 'default', ...style }}>{children}</div>;
+const LargeTitle = ({ title, sub }) => <div style={{ padding: '18px 20px 4px' }}><div style={{ color: C.sec, fontSize: 15, fontWeight: 500, marginBottom: 2 }}>{sub}</div><h1 className="num" style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.025em' }}>{title}</h1></div>;
+const Placeholder = ({ dev, s = 56 }) => (
+  <div title={'Placeholder — chưa có ảnh chính thức ' + dev.short} style={{ width: s, height: s, borderRadius: s * 0.3, background: '#1C1C1E', display: 'grid', placeItems: 'center', flex: 'none', position: 'relative' }}>
+    <div style={{ width: s * 0.56, height: s * 0.56, borderRadius: '50%', background: `radial-gradient(circle, #1C1C1E 52%, ${dev.tint} 54%, #6b5f4c 68%, #1C1C1E 71%)`, opacity: .9 }} />
+  </div>);
+
+/* ---------- Progress ring (one step per 0.5 s packet) ---------- */
+function Ring({ size = 252, stroke = 15, color, progress, ticks, lit, glow, children }) {
+  const c = size / 2, r = c - 26, L = 2 * Math.PI * r;
+  return (
+    <div style={{ position: 'relative', width: size, height: size }}>
+      <svg width={size} height={size} style={{ position: 'absolute', inset: 0, filter: glow ? `drop-shadow(0 0 14px ${color}55)` : 'none' }}>
+        {ticks > 0 && Array.from({ length: ticks }).map((_, i) => {
+          const a = (i / ticks) * 2 * Math.PI - Math.PI / 2, r1 = r + 15, r2 = r + 20;
+          return <line key={i} x1={c + r1 * Math.cos(a)} y1={c + r1 * Math.sin(a)} x2={c + r2 * Math.cos(a)} y2={c + r2 * Math.sin(a)} stroke={i < lit ? color : 'rgba(255,255,255,0.13)'} strokeWidth="2" strokeLinecap="round" />;
+        })}
+        <circle cx={c} cy={c} r={r} fill="none" stroke={color} strokeOpacity=".16" strokeWidth={stroke} />
+        <circle className="ring-arc" cx={c} cy={c} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={L} strokeDashoffset={L * (1 - Math.max(0.0001, progress))} transform={`rotate(-90 ${c} ${c})`} opacity={progress > 0 ? 1 : 0} />
+      </svg>
+      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}>{children}</div>
+    </div>);
+}
+const MiniRing = ({ color, progress, s = 40 }) => { const r = s / 2 - 4, L = 2 * Math.PI * r; return (
+  <svg width={s} height={s}><circle cx={s/2} cy={s/2} r={r} fill="none" stroke={color} strokeOpacity=".2" strokeWidth="5" />
+  <circle className="ring-arc" cx={s/2} cy={s/2} r={r} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round" strokeDasharray={L} strokeDashoffset={L * (1 - progress)} transform={`rotate(-90 ${s/2} ${s/2})`} /></svg>); };
+
+/* what to show for a device+metric right now */
+function readout(dev, metric, sess) {
+  const s = sess[dev.id];
+  if (s && s.metric === metric) {
+    if (!s.done && s.vals.length && SCRIPT[dev.id][metric].kind === 'series') return { v: s.vals[s.vals.length - 1], live: true, s };
+    if (!s.done) return { v: null, live: true, s };
+    if (s.result === 'Chưa đeo') return { word: 'Chưa đeo', s };
+    if (s.result) return { v: s.result, s };
+  }
+  const last = dev.last && dev.last[metric];
+  if (last === 'Chưa đeo') return { word: 'Chưa đeo' };
+  return last ? { v: last } : { none: true };
+}
+
+/* ---------- Glass tab bar (Liquid Glass belongs to the navigation layer only) ---------- */
+function TabBar({ tab, go }) {
+  const T = [['fleet', 'Thiết bị', 'devices'], ['scan', 'Thêm', 'plus'], ['feas', 'Khả thi', 'chart']];
+  return (
+    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 10, display: 'flex', justifyContent: 'center', zIndex: 15, pointerEvents: 'none' }}>
+      <div style={{ pointerEvents: 'auto', display: 'flex', gap: 4, padding: 5, borderRadius: 40, background: 'rgba(44,44,48,0.62)', backdropFilter: 'blur(26px) saturate(180%)', WebkitBackdropFilter: 'blur(26px) saturate(180%)', boxShadow: 'inset 0 0.5px 0 rgba(255,255,255,0.22), 0 10px 30px rgba(0,0,0,0.5)' }}>
+        {T.map(([k, l, i]) => { const on = tab === k; return (
+          <button key={k} onClick={() => go(k)} className="press" style={{ width: 92, height: 54, borderRadius: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, background: on ? 'rgba(255,255,255,0.14)' : 'transparent', color: on ? '#fff' : '#AEAEB2' }}>
+            <Icon n={i} s={21} /><span style={{ fontSize: 12, fontWeight: 600 }}>{l}</span></button>); })}
+      </div>
+    </div>);
+}
+
+/* ---------- A. Fleet (Health "Summary" cards per device) ---------- */
+function Fleet({ app }) {
+  const { conn, sim, openDetail, measureAll, stopAll, setConn } = app;
+  const connected = QRING.filter(id => conn[id] === 'connected');
+  const running = connected.some(id => sim.sess[id] && !sim.sess[id].done);
+  const r = sim.sess.r09; const prog = running && r ? r.t / r.total : 0;
+  return (
+    <div>
+      <LargeTitle title="Thiết bị" sub="Thứ Ba, 13 tháng 10" />
+      <div style={{ padding: '0 16px' }}>
+        <div style={{ padding: '2px 4px 0', color: C.sec, fontSize: 15 }}>{connected.length} đang kết nối · giới hạn ~{GATT_LIMIT}</div>
+
+        <Card style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 14, padding: '16px 16px 16px 18px' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: METRIC.hr.color, fontSize: 15, fontWeight: 600 }}><Icon n="heart" s={16} />Đo đồng loạt</div>
+            <div style={{ fontSize: 17, fontWeight: 600, marginTop: 6, lineHeight: 1.3 }}>{running ? `Đang đo nhịp tim · ${vn(((r ? r.t : 0) * 0.5).toFixed(1))} s` : 'Nhịp tim trên mọi thiết bị hỗ trợ'}</div>
+            <div style={{ color: C.sec, fontSize: 15, marginTop: 2 }}>{connected.filter(id => DEV[id].caps.includes('hr')).length} thiết bị · mỗi gói 0,5 s</div>
+          </div>
+          <button onClick={running ? stopAll : measureAll} className="press" aria-label="Đo đồng loạt" style={{ width: 56, height: 56, borderRadius: 28, position: 'relative', display: 'grid', placeItems: 'center', background: running ? 'transparent' : METRIC.hr.color, color: running ? METRIC.hr.color : '#000' }}>
+            {running && <span style={{ position: 'absolute', inset: 0 }}><MiniRing color={METRIC.hr.color} progress={prog} s={56} /></span>}
+            <Icon n={running ? 'stop' : 'play'} s={22} />
+          </button>
+        </Card>
+
+        <Section>Đang kết nối</Section>
+        <div style={{ display: 'grid', gap: 12 }}>
+          {QRING.map(id => <DeviceCard key={id} dev={DEV[id]} app={app} />)}
+        </div>
+
+        <Section>Đã thấy gần đây</Section>
+        <Card style={{ padding: '15px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div><div style={{ fontSize: 17, fontWeight: 600 }}>{DEV.coros.name}</div><div style={{ color: C.sec, fontSize: 15, marginTop: 3 }}>Chưa hỗ trợ · {DEV.coros.reason}</div></div>
+            <Icon n="lock" s={18} c="#8E8E93" />
+          </div>
+        </Card>
+        <div style={{ height: 110 }} />
+      </div>
+    </div>);
+}
+function DeviceCard({ dev, app }) {
+  const { conn, sim, openDetail, setConn } = app;
+  const st = conn[dev.id]; const on = st === 'connected';
+  const s = sim.sess[dev.id]; const metric = s ? s.metric : dev.hero; const m = METRIC[metric];
+  const ro = readout(dev, metric, sim.sess);
+  return (
+    <Card onClick={() => openDetail(dev.id)} style={{ padding: '15px 16px 16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 5, background: dev.tint }} />
+          <span style={{ fontSize: 17, fontWeight: 600 }}>{dev.name}</span>
+        </div>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Status s={st} /><Icon n="chev" s={15} c="#8E8E93" /></span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 14 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: m.color, fontSize: 15, fontWeight: 600 }}><Icon n={m.icon} s={15} />{m.name}{ro.live && <span style={{ color: C.sec, fontWeight: 500 }}>· đang đo</span>}</div>
+          <div style={{ marginTop: 4, display: 'flex', alignItems: 'baseline', gap: 5 }}>
+            {ro.word ? <span className="num" style={{ fontSize: 30, fontWeight: 600, color: '#E5E5EA' }}>{ro.word}</span>
+              : ro.none || ro.v == null ? <span className="num" style={{ fontSize: 30, fontWeight: 600, color: C.sec }}>{ro.live ? 'Đang đo…' : 'chưa đo'}</span>
+              : <><span className="num" style={{ fontSize: 40, fontWeight: 600, lineHeight: 1 }}>{ro.v}</span><span style={{ fontSize: 17, color: C.sec, fontWeight: 500 }}>{m.unit}</span></>}
+          </div>
+        </div>
+        {ro.live && s ? <MiniRing color={m.color} progress={s.t / s.total} s={44} /> : null}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 12, borderTop: `0.5px solid ${C.hair}` }}>
+        <Battery pct={dev.battery} />
+        {on ? <span style={{ color: C.sec, fontSize: 15 }}>{dev.caps.length} chức năng · {dev.kind}</span>
+          : <button onClick={e => { e.stopPropagation(); app.connect([dev.id]); }} className="press" style={{ fontSize: 15, fontWeight: 600, color: '#000', background: '#fff', borderRadius: 20, padding: '6px 14px' }}>Kết nối</button>}
+      </div>
+    </Card>);
+}
+
+/* ---------- B. Scan & add (grouped by SDK, multi-select, parallel connect) ---------- */
+function Scan({ app }) {
+  const { conn, sel, setSel, connect, go } = app;
+  const picked = QRING.filter(id => sel[id] && conn[id] !== 'connected');
+  const busy = QRING.some(id => conn[id] === 'connecting');
+  const allDone = QRING.every(id => conn[id] === 'connected');
+  const Row = ({ id, last }) => { const d = DEV[id]; const st = conn[id]; const can = st !== 'connected' && st !== 'connecting'; const on = !!sel[id];
+    return (
+      <div onClick={() => can && setSel({ ...sel, [id]: !on })} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 16px', cursor: can ? 'pointer' : 'default', position: 'relative' }}>
+        {st === 'connected' ? <span style={{ width: 26, height: 26, borderRadius: 13, background: C.green, display: 'grid', placeItems: 'center', color: '#000' }}><Icon n="check" s={16} /></span>
+          : st === 'connecting' ? <span style={{ width: 26, display: 'grid', placeItems: 'center' }}><Spinner s={22} c={C.blue} /></span>
+          : <span style={{ width: 26, height: 26, borderRadius: 13, border: on ? 'none' : '2px solid #636366', background: on ? C.blue : 'transparent', display: 'grid', placeItems: 'center', color: '#fff' }}>{on && <Icon n="check" s={16} />}</span>}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>{d.name}</div>
+          <div style={{ color: st === 'connected' ? C.green : C.sec, fontSize: 15, marginTop: 2 }}>{st === 'connected' ? 'Đã kết nối' : st === 'connecting' ? 'Đang kết nối song song…' : d.kind + ' · ' + (d.ble || 'tên BLE chưa ghi')}</div>
+        </div>
+        <Bars n={d.bars} />
+        {!last && <span style={{ position: 'absolute', left: 56, right: 0, bottom: 0, height: 0.5, background: C.hair }} />}
+      </div>); };
+  return (
+    <div>
+      <LargeTitle title="Thêm thiết bị" sub="Bluetooth" />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '22px 0 6px' }}>
+        <div style={{ position: 'relative', width: 132, height: 132, display: 'grid', placeItems: 'center' }}>
+          {[0, 1].map(i => <span key={i} style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `1.5px solid ${C.blue}`, animation: `ripple 2.8s ease-out ${i * 1.4}s infinite` }} />)}
+          <div style={{ width: 76, height: 76, borderRadius: 38, background: 'rgba(10,132,255,0.16)', display: 'grid', placeItems: 'center' }}>
+            <span className="num" style={{ fontSize: 30, fontWeight: 600 }}>3</span></div>
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 600, marginTop: 12 }}>Đang quét xung quanh</div>
+        <div style={{ color: C.sec, fontSize: 15, marginTop: 3 }}>Chọn nhiều thiết bị để kết nối cùng lúc</div>
+      </div>
+      <div style={{ padding: '0 16px' }}>
+        <Section right={<span style={{ color: C.sec, fontSize: 15 }}>2 thiết bị</span>}>QRing</Section>
+        <div style={{ background: C.card, borderRadius: 22, overflow: 'hidden' }}><Row id="r09" /><Row id="hs" last /></div>
+        <Section right={<span style={{ color: C.sec, fontSize: 15 }}>1 thiết bị</span>}>Chưa hỗ trợ</Section>
+        <div style={{ background: C.card, borderRadius: 22, display: 'flex', alignItems: 'center', gap: 14, padding: '13px 16px' }}>
+          <span style={{ width: 26, display: 'grid', placeItems: 'center' }}><Icon n="lock" s={18} c="#8E8E93" /></span>
+          <div style={{ flex: 1 }}><div style={{ fontSize: 17, fontWeight: 600, color: '#C7C7CC' }}>{DEV.coros.name}</div><div style={{ color: C.sec, fontSize: 15, marginTop: 2 }}>{DEV.coros.reason}</div></div>
+        </div>
+        <div style={{ height: 170 }} />
+      </div>
+    </div>);
+}
+
+function ScanCTA({ app }) {
+  const { conn, sel, connect, go } = app;
+  const picked = QRING.filter(id => sel[id] && conn[id] !== 'connected');
+  const busy = QRING.some(id => conn[id] === 'connecting');
+  const allDone = QRING.every(id => conn[id] === 'connected');
+  return (
+      <div style={{ position: 'absolute', left: 16, right: 16, bottom: 84, zIndex: 14 }}>
+        <button disabled={busy || (!picked.length && !allDone)} onClick={() => allDone ? go('fleet') : connect(picked)} className="press"
+          style={{ width: '100%', height: 54, borderRadius: 27, background: busy || (!picked.length && !allDone) ? '#3A3A3C' : '#fff', color: busy || (!picked.length && !allDone) ? '#AEAEB2' : '#000', fontSize: 17, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 10px 30px rgba(0,0,0,.5)' }}>
+          {busy ? <><Spinner s={16} c="#AEAEB2" />Đang kết nối song song…</> : allDone ? 'Xong · xem thiết bị' : picked.length ? `Kết nối ${picked.length} thiết bị` : 'Chọn thiết bị'}
+        </button>
+      </div>);
+}
+
+/* ---------- C. Device detail (independent per device) ---------- */
+function Detail({ app }) {
+  const { detailId, setDetailId, conn, sim, dispatch, go, metricSel, setMetricSel, tech, setTech, setConn } = app;
+  const dev = DEV[detailId]; const st = conn[dev.id];
+  const liveCaps = dev.caps.filter(k => METRIC[k].live);
+  const metric = metricSel[dev.id] || dev.hero; const m = METRIC[metric];
+  const s = sim.sess[dev.id]; const mine = s && s.metric === metric ? s : null;
+  const running = s && !s.done; const hasScript = !!(SCRIPT[dev.id] && SCRIPT[dev.id][metric]);
+  const ro = readout(dev, metric, sim.sess);
+  const total = mine ? mine.total : 50; const lit = mine ? mine.t : 0;
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px 0' }}>
+        <button onClick={() => go('fleet')} className="press" style={{ display: 'flex', alignItems: 'center', gap: 2, color: '#E5E5EA', fontSize: 17, fontWeight: 500, height: 40, padding: '0 6px' }}><Icon n="back" s={22} />Thiết bị</button>
+        <div style={{ display: 'flex', padding: 3, borderRadius: 20, background: 'rgba(118,118,128,0.24)' }}>
+          {QRING.map(id => { const on = id === detailId; const busy = sim.sess[id] && !sim.sess[id].done; return (
+            <button key={id} onClick={() => setDetailId(id)} className="press" style={{ height: 32, padding: '0 13px', borderRadius: 17, display: 'flex', alignItems: 'center', gap: 7, fontSize: 15, fontWeight: 600, background: on ? '#636366' : 'transparent', color: on ? '#fff' : '#C7C7CC' }}>
+              <span className={busy ? 'breathe' : ''} style={{ width: 8, height: 8, borderRadius: 4, background: DEV[id].tint }} />{DEV[id].short}</button>); })}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px 0' }}>
+        <Placeholder dev={dev} />
+        <div style={{ flex: 1 }}>
+          <h1 className="num" style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em' }}>{dev.name}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 3 }}><Status s={st} /><Battery pct={dev.battery} /></div>
+        </div>
+      </div>
+
+      <div style={{ padding: '18px 16px 0' }}>
+        <Card style={{ padding: '16px 0 18px', borderRadius: 26 }}>
+          <div className="scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '0 16px' }}>
+            {liveCaps.map(k => { const on = k === metric; const mk = METRIC[k]; return (
+              <button key={k} onClick={() => !running && setMetricSel({ ...metricSel, [dev.id]: k })} className="press" style={{ flex: 'none', height: 36, padding: '0 14px', borderRadius: 18, display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 600, background: on ? mk.color + '2E' : C.card2, color: on ? mk.color : '#D1D1D6', opacity: running && !on ? .55 : 1 }}>
+                <Icon n={mk.icon} s={15} />{mk.name}</button>); })}
+          </div>
+          <div style={{ display: 'grid', placeItems: 'center', marginTop: 14 }}>
+            <Ring color={m.color} progress={mine ? mine.t / mine.total : 0} ticks={total} lit={lit} glow={running && mine}>
+              <div>
+                <div style={{ color: m.color, fontSize: 15, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon n={m.icon} s={15} />{m.name}</div>
+                {ro.word ? <div className="num" style={{ fontSize: 34, fontWeight: 600, marginTop: 6 }}>{ro.word}</div>
+                  : ro.none || ro.v == null ? <div className="num" style={{ fontSize: 30, fontWeight: 600, marginTop: 8, color: ro.live ? '#fff' : C.sec }}>{ro.live ? 'Đang đo…' : 'chưa đo'}</div>
+                  : <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4, marginTop: 2 }}><span className="num" style={{ fontSize: String(ro.v).length > 3 ? 50 : 64, fontWeight: 600, lineHeight: 1.05 }}>{ro.v}</span><span style={{ fontSize: 17, color: C.sec, fontWeight: 500 }}>{m.unit}</span></div>}
+                <div style={{ color: C.sec, fontSize: 13, marginTop: 6, fontWeight: 500 }}>
+                  {mine && !mine.done ? `gói ${mine.t}/${mine.total} · ${vn((mine.t * 0.5).toFixed(1))} s` : mine && mine.done ? (mine.result === 'Chưa đeo' ? 'Thiết bị báo chưa đeo' : 'Hoàn tất · ' + vn((mine.t * 0.5).toFixed(1)) + ' s') : ro.none ? (hasScript ? 'Sẵn sàng' : 'Chưa có số đo thật') : 'Lần đo gần nhất'}
+                </div>
+              </div>
+            </Ring>
+          </div>
+          <div style={{ padding: '14px 16px 0' }}>
+            {running ? <button onClick={() => dispatch({ type: 'stop', id: dev.id })} className="press" style={{ width: '100%', height: 52, borderRadius: 26, background: C.card2, fontSize: 17, fontWeight: 600 }}>Dừng đo</button>
+              : <button disabled={!hasScript || st !== 'connected'} onClick={() => dispatch({ type: 'start', id: dev.id, metric })} className="press" style={{ width: '100%', height: 52, borderRadius: 26, background: hasScript && st === 'connected' ? m.color : C.card2, color: hasScript && st === 'connected' ? '#000' : '#AEAEB2', fontSize: 17, fontWeight: 600 }}>
+                {st !== 'connected' ? 'Chưa kết nối' : hasScript ? (mine ? 'Đo lại' : 'Bắt đầu đo') + ' ' + m.name.toLowerCase() : 'Chưa đo thử trên thiết bị thật'}</button>}
+          </div>
+        </Card>
+
+        <Section right={<span style={{ color: C.sec, fontSize: 15 }}>theo khả năng</span>}>Chỉ số</Section>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {dev.caps.map(k => { const mk = METRIC[k]; const r = readout(dev, k, sim.sess); return (
+            <Card key={k} onClick={mk.live ? () => !running && setMetricSel({ ...metricSel, [dev.id]: k }) : undefined} style={{ padding: '13px 14px', borderRadius: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: mk.color, fontSize: 15, fontWeight: 600 }}><Icon n={mk.icon} s={15} />{mk.name}</div>
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                {r.word ? <span className="num" style={{ fontSize: 20, fontWeight: 600 }}>{r.word}</span>
+                  : r.v != null && !r.live ? <><span className="num" style={{ fontSize: 26, fontWeight: 600 }}>{r.v}</span><span style={{ color: C.sec, fontSize: 15 }}>{mk.unit}</span></>
+                  : <span style={{ fontSize: 15, color: C.sec }}>{r.live ? 'đang đo…' : mk.note ? 'chưa đo · ' + mk.note.toLowerCase() : 'chưa đo'}</span>}
+              </div>
+            </Card>); })}
+        </div>
+
+        <Card style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ width: 34, height: 34, borderRadius: 10, background: C.card2, display: 'grid', placeItems: 'center' }}><Icon n="sync" s={18} c="#D1D1D6" /></span>
+          <div style={{ flex: 1 }}><div style={{ fontSize: 17, fontWeight: 600 }}>Đồng bộ lịch sử</div><div style={{ color: C.sec, fontSize: 15 }}>Giấc ngủ, nhịp tim theo ngày</div></div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#D1D1D6', background: C.card2, padding: '5px 10px', borderRadius: 12 }}>Sắp có</span>
+        </Card>
+
+        <Card style={{ marginTop: 12, padding: 0, overflow: 'hidden' }}>
+          <button onClick={() => setTech(!tech)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, fontSize: 17, fontWeight: 600 }}>
+            Chi tiết kỹ thuật<Icon n="chev" s={16} c="#8E8E93" style={{ transform: tech ? 'rotate(90deg)' : 'none', transition: 'transform .25s' }} /></button>
+          {tech && <div style={{ padding: '0 16px 16px' }}>
+            {[['SDK', dev.sdk], ['Tên BLE', dev.ble || 'chưa ghi'], ['MAC', dev.mac], ['Phần cứng', dev.hw], ['Firmware', dev.fw], ['RSSI', dev.rssi || 'chưa đo'], ['Pin', dev.batteryNote || 'chưa đo'], ['Ghi chú', dev.note || 'Gói đo mỗi ~0,5 s'], ['Ảnh', 'placeholder, chưa có ảnh chính thức']].map(([k, v]) => (
+              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '9px 0', borderTop: `0.5px solid ${C.hair}`, fontSize: 15 }}>
+                <span style={{ color: C.sec }}>{k}</span><span className={/MAC|Phần|Firm|Tên/.test(k) ? 'mono' : ''} style={{ textAlign: 'right', fontSize: /MAC|Phần|Firm|Tên/.test(k) ? 13 : 15 }}>{v}</span></div>))}
+            <div style={{ color: C.sec, fontSize: 13, fontWeight: 600, margin: '14px 0 8px' }}>Gói tin thô (mới nhất trước)</div>
+            <div style={{ background: '#000', borderRadius: 14, padding: '10px 12px', maxHeight: 210, overflow: 'auto' }} className="scroll">
+              {sim.logs[dev.id].slice(0, 8).map((l, i) => (
+                <div key={i} style={{ padding: '5px 0', borderTop: i ? `0.5px solid ${C.hair}` : 'none' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: C.sec }}><span>{l.txt}</span><span>{l.at}</span></div>
+                  {l.hex && <div className="mono" style={{ fontSize: 12, color: '#E5E5EA', marginTop: 3, lineHeight: 1.5 }}>{l.hex.split(' ').reduce((a, b, i) => (i % 8 ? a[a.length - 1].push(b) : a.push([b]), a), []).map((r, j) => <div key={j}>{r.join(' ')}</div>)}</div>}
+                </div>))}
+            </div>
+            <button onClick={() => setConn({ ...conn, [dev.id]: st === 'connected' ? 'disconnected' : 'connected' })} className="press" style={{ marginTop: 14, width: '100%', height: 46, borderRadius: 23, background: C.card2, color: st === 'connected' ? '#FF6961' : '#fff', fontSize: 17, fontWeight: 600 }}>{st === 'connected' ? 'Ngắt kết nối' : 'Kết nối lại'}</button>
+          </div>}
+        </Card>
+        <div style={{ height: 100 }} />
+      </div>
+    </div>);
+}
+
+/* ---------- D. Feasibility / parallel monitor ---------- */
+function Feas({ app }) {
+  const { conn, sim, measureAll, stopAll, openDetail } = app;
+  const connected = QRING.filter(id => conn[id] === 'connected');
+  const running = connected.some(id => sim.sess[id] && !sim.sess[id].done);
+  const cell = (v, real) => <span className={real ? 'num' : ''} style={{ fontSize: 15, color: real ? '#fff' : C.sec, fontWeight: real ? 600 : 400 }}>{v}</span>;
+  const rows = [
+    ['RSSI', d => d.rssi ? cell(d.rssi.replace(' đến ', '…').replace(' dBm', ''), true) : cell('chưa đo')],
+    ['Gói/giây', () => cell('chưa đo')],
+    ['Lỗi · timeout', () => cell('chưa đo')],
+    ['Độ trễ phản hồi', () => cell('chưa đo')],
+    ['Pin', d => d.battery != null ? cell(d.battery + ' %', true) : cell('chưa đo')],
+  ];
+  return (
+    <div>
+      <LargeTitle title="Khả thi" sub="Giám sát song song" />
+      <div style={{ padding: '0 16px' }}>
+        <Card style={{ marginTop: 16, padding: '18px 18px 20px', borderRadius: 26 }}>
+          <div style={{ color: C.green, fontSize: 15, fontWeight: 600 }}>Kết nối GATT đồng thời</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+            <span className="num" style={{ fontSize: 64, fontWeight: 600, lineHeight: 1 }}>{connected.length}</span>
+            <span className="num" style={{ fontSize: 28, fontWeight: 600, color: C.sec }}>/ {GATT_LIMIT}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 16 }}>
+            {Array.from({ length: GATT_LIMIT }).map((_, i) => <span key={i} style={{ flex: 1, height: 8, borderRadius: 4, background: i < connected.length ? C.green : '#3A3A3C', transition: 'background .4s' }} />)}
+          </div>
+          <div style={{ color: C.sec, fontSize: 15, marginTop: 12, lineHeight: 1.4 }}>Android thường giới hạn khoảng {GATT_LIMIT} kết nối cùng lúc. Còn {GATT_LIMIT - connected.length} chỗ trống.</div>
+        </Card>
+
+        <Section right={<button onClick={running ? stopAll : measureAll} className="press" style={{ fontSize: 15, fontWeight: 600, color: running ? '#fff' : '#000', background: running ? C.card2 : METRIC.hr.color, padding: '7px 14px', borderRadius: 18 }}>{running ? 'Dừng' : 'Đo đồng loạt'}</button>}>Kênh trực tiếp</Section>
+        <Card style={{ padding: '6px 16px' }}>
+          {connected.map((id, idx) => { const d = DEV[id]; const s = sim.sess[id]; const m = METRIC[s ? s.metric : 'hr']; const vals = s ? s.vals : [];
+            const tot = 50; const ro = readout(d, s ? s.metric : 'hr', sim.sess);
+            return (
+              <div key={id} onClick={() => openDetail(id)} style={{ padding: '12px 0', borderTop: idx ? `0.5px solid ${C.hair}` : 'none', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 17, fontWeight: 600 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: d.tint }} />{d.short}</span>
+                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    {ro.word ? <span style={{ fontSize: 15, fontWeight: 600, color: '#E5E5EA' }}>{ro.word}</span>
+                      : ro.v != null ? <><span className="num" style={{ fontSize: 22, fontWeight: 600, color: m.color }}>{ro.v}</span><span style={{ fontSize: 15, color: C.sec }}>{m.unit}</span></>
+                      : <span style={{ fontSize: 15, color: C.sec }}>{s && !s.done ? 'đang chờ gói…' : 'chưa đo'}</span>}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2.4, height: 40, marginTop: 10 }}>
+                  {Array.from({ length: tot }).map((_, i) => { const v = vals[i]; const h = typeof v === 'number' ? 14 + (v - 78) * 6.5 : (s && i < s.t ? 8 : 4);
+                    return <span key={i} className="bar" style={{ flex: 1, height: Math.min(40, h), borderRadius: 2, background: typeof v === 'number' ? m.color : s && i < s.t ? '#8E8E93' : '#2C2C2E' }} />; })}
+                </div>
+                <div style={{ color: C.sec, fontSize: 13, marginTop: 7 }}>{s ? `${s.t} gói · mỗi 0,5 s` : 'Chưa chạy trong phiên này'}</div>
+              </div>); })}
+        </Card>
+
+        <Section>Chỉ số kết nối</Section>
+        <Card style={{ padding: '6px 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr 1fr', padding: '10px 0', fontSize: 13, fontWeight: 600, color: C.sec }}><span /><span>R09</span><span>HS500A</span></div>
+          {rows.map(([k, f]) => (
+            <div key={k} style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr 1fr', alignItems: 'center', padding: '11px 0', borderTop: `0.5px solid ${C.hair}` }}>
+              <span style={{ fontSize: 15 }}>{k}</span>{f(DEV.r09)}{f(DEV.hs)}</div>))}
+        </Card>
+        <div style={{ color: C.sec, fontSize: 13, lineHeight: 1.45, padding: '10px 4px 0' }}>Đã quan sát: nhẫn gửi gói đo khoảng mỗi 0,5 s. Gói/giây, lỗi và độ trễ khi chạy nhiều thiết bị chưa đo; SDK sẽ ghi lại.</div>
+        <div style={{ height: 110 }} />
+      </div>
+    </div>);
+}
+
+/* ---------- One independent app instance per phone ---------- */
+function Phone({ cfg }) {
+  const [tab, setTab] = useState(cfg.screen === 'detail' ? 'fleet' : cfg.screen);
+  const [screen, setScreen] = useState(cfg.screen);
+  const [detailId, setDetailId] = useState('r09');
+  const [conn, setConn] = useState(cfg.conn);
+  const [sel, setSel] = useState(cfg.sel || {});
+  const [metricSel, setMetricSel] = useState({ r09: 'hr', hs: 'hr' });
+  const [tech, setTech] = useState(false);
+  const [sim, dispatch] = useReducer(simReducer, null, () => ({ sess: {}, logs: seedLogs() }));
+  useEffect(() => { const t = setInterval(() => dispatch({ type: 'tick' }), 500); return () => clearInterval(t); }, []);
+  useEffect(() => { if (cfg.auto) cfg.auto.forEach(([id, m]) => dispatch({ type: 'start', id, metric: m })); }, []);
+  const go = k => { setTab(k); setScreen(k); };
+  const app = {
+    conn, setConn, sel, setSel, sim, dispatch, detailId, setDetailId, metricSel, setMetricSel, tech, setTech, go,
+    openDetail: id => { setDetailId(id); setScreen('detail'); setTab('fleet'); },
+    measureAll: () => QRING.forEach(id => { if (conn[id] === 'connected' && DEV[id].caps.includes('hr')) { setMetricSel(ms => ({ ...ms, [id]: 'hr' })); dispatch({ type: 'start', id, metric: 'hr' }); } }),
+    stopAll: () => QRING.forEach(id => dispatch({ type: 'stop', id })),
+    connect: ids => { // parallel: all start at once, finish independently
+      setConn(c => { const n = { ...c }; ids.forEach(id => n[id] = 'connecting'); return n; });
+      ids.forEach((id, i) => setTimeout(() => setConn(c => ({ ...c, [id]: 'connected' })), 1300 + i * 650));
+      setSel({});
+    },
+  };
+  const Screen = { fleet: Fleet, scan: Scan, detail: Detail, feas: Feas }[screen];
+  return (
+    <AndroidFrame width={393} height={851} darkMode time="14:32" battery={64}>
+      <div style={{ position: 'absolute', inset: 0, background: C.bg }}>
+        <div className="scroll" style={{ position: 'absolute', inset: 0, overflowY: 'auto' }}><Screen app={app} /></div>
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 120, background: 'linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.88) 70%)', pointerEvents: 'none', zIndex: 12 }} />
+        {screen === 'scan' && <ScanCTA app={app} />}
+        <TabBar tab={tab} go={go} />
+      </div>
+    </AndroidFrame>);
+}
+
+const ALL = { r09: 'connected', hs: 'connected' };
+const PHONES = [
+  { k: 'A', label: 'Tổng quan', cfg: { screen: 'fleet', conn: ALL } },
+  { k: 'B', label: 'Quét & thêm', cfg: { screen: 'scan', conn: { r09: 'idle', hs: 'idle' }, sel: { r09: true, hs: true } } },
+  { k: 'C', label: 'Chi tiết thiết bị', cfg: { screen: 'detail', conn: ALL, auto: [['r09', 'hr']] } },
+  { k: 'D', label: 'Khả thi · song song', cfg: { screen: 'feas', conn: ALL, auto: [['r09', 'hr'], ['hs', 'hr']] } },
+];
+function Canvas() {
+  return (
+    <div style={{ width: 1760, height: 1000, padding: '22px 22px 0', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', gap: 20 }}>
+        {PHONES.map(p => (
+          <div key={p.k} style={{ width: 413 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '0 6px 10px', fontSize: 15 }}>
+              <span className="num" style={{ fontWeight: 700, color: '#fff' }}>{p.k}</span><span style={{ color: '#A1A1A8', fontWeight: 500 }}>{p.label}</span></div>
+            <Phone cfg={p.cfg} />
+          </div>))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#8E8E93', fontSize: 13, padding: '16px 6px 0' }}>
+        <span>SmartWear Lab · hướng Apple Health / Fitness (dark) · mỗi máy là một phiên app độc lập, bấm được</span>
+        <span>Font thay SF Pro: Inter + Inter Tight · số liệu thật từ R09 / HS500A · "chưa đo" = chưa có số thật</span>
+      </div>
+    </div>);
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Canvas />);
+</script>
+</body>
+</html>

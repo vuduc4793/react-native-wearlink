@@ -1,0 +1,63 @@
+# XcodeGen: sinh SmartWearLab.xcodeproj (scripts/ios.sh gen). File .xcodeproj không commit.
+name: SmartWearLab
+options:
+  bundleIdPrefix: com.smartwear
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+packages:
+  SmartWearKit:
+    path: ../../sdks
+targets:
+  SmartWearLab:
+    type: application
+    platform: iOS
+    sources:
+      - path: SmartWearLab
+      # Mô hình 3D Y25 (Three.js) cho popup "thiết bị ở gần": thư mục giữ nguyên cấu trúc để import tương đối chạy được.
+      - path: ../shared/watch3d
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: SmartWearKit
+        product: SmartWearCore
+      - package: SmartWearKit
+        product: SmartWearQRing
+      - package: SmartWearKit
+        product: SmartWearStandard
+      - package: SmartWearKit
+        product: SmartWearGloryFit
+      - package: SmartWearKit
+        product: SmartWearVeepoo
+    info:
+      path: SmartWearLab/Info.plist
+      properties:
+        CFBundleDisplayName: SmartWear Lab
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        NSBluetoothAlwaysUsageDescription: "SmartWear Lab dùng Bluetooth để tìm, kết nối và đo với nhẫn, đồng hồ và các thiết bị đeo ở gần."
+        NSCameraUsageDescription: "SmartWear Lab dùng camera để chụp ảnh khi bạn bấm nút chụp trên đồng hồ."
+        NSAppleMusicUsageDescription: "SmartWear Lab đọc tên bài đang phát trong app Nhạc để hiện trên đồng hồ."
+        NSPhotoLibraryAddUsageDescription: "SmartWear Lab lưu ảnh chụp từ xa vào thư viện Ảnh."
+        NSLocationWhenInUseUsageDescription: "SmartWear Lab dùng vị trí gần đúng để lấy dự báo thời tiết và gửi lên đồng hồ."
+        UILaunchScreen:
+          UIColorName: ""
+        UIUserInterfaceStyle: Dark
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        # Tự nối lại thiết bị đang giữ kết nối khi app ở nền (yêu cầu kết nối chờ + khôi phục trạng thái CoreBluetooth).
+        UIBackgroundModes: [bluetooth-central]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.smartwear.lab
+        PRODUCT_NAME: SmartWearLab
+        DEVELOPMENT_TEAM: WW7SVG7456
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ENABLE_PREVIEWS: NO
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO

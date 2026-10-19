@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- FOREGROUND_SERVICE*, POST_NOTIFICATIONS, READ_PHONE_STATE: khai báo trong manifest của core. -->
+    <!-- Thời tiết: vị trí gần đúng + Open-Meteo. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Quyền nhạy cảm theo chính sách: thư viện core không khai báo, app chủ tự khai báo. -->
+    <!-- Danh bạ gửi lên đồng hồ (chỉ các liên hệ người dùng chọn). -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Báo cuộc gọi đến lên đồng hồ (như GloryFitPro: trạng thái + số gọi đến), cúp máy khi bấm từ chối trên đồng hồ. -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+    <!-- Trả lời SMS nhanh từ đồng hồ. -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- Chụp ảnh từ xa (CameraX); Android 8–9 cần quyền ghi để lưu vào thư viện ảnh. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
+    <application
+        android:name=".SmartWearApp"
+        android:label="SmartWear Lab"
+        android:theme="@android:style/Theme.Material.NoActionBar">
+        <!-- Foreground service giữ kết nối và NotificationListener nằm trong manifest của core (com.smartwear.core.phone). -->
+
+        <activity
+            android:name=".RemoteCameraActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTask" />
+
+        <activity
+            android:name=".MainActivity"
+            android:launchMode="singleTask"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -1,0 +1,66 @@
+// Thư viện RN `react-native-smartwear` (Android). Biên dịch thẳng mã nguồn SDK Kotlin trong repo
+// (sdks/core, qring, gloryfit, veepoo, standard), nên app dùng thư viện không phải khai báo module Gradle nào thêm.
+buildscript {
+    ext.getExtOrDefault = { name, fallback -> rootProject.ext.has(name) ? rootProject.ext.get(name) : fallback }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:${getExtOrDefault('androidGradlePluginVersion', '8.7.3')}"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${getExtOrDefault('kotlinVersion', '2.0.21')}"
+    }
+}
+
+apply plugin: "com.android.library"
+apply plugin: "kotlin-android"
+apply plugin: "com.facebook.react"
+
+// Mã SDK: cài từ npm ⇒ `vendor/sdks` trong gói (scripts/vendor.js chép lúc pack); trong repo ⇒ `sdks/` (../..).
+// projectDir có thể là đường qua symlink trong node_modules (`file:` dependency): đi theo đường thật.
+def vendored = new File(projectDir.canonicalFile, "../vendor/sdks")
+def sdkRoot = vendored.isDirectory() ? vendored.canonicalFile : new File(projectDir.canonicalFile, "../..").canonicalFile
+
+android {
+    namespace "com.smartwear.rn"
+    compileSdkVersion getExtOrDefault("compileSdkVersion", 35)
+
+    defaultConfig {
+        minSdkVersion Math.max(26, getExtOrDefault("minSdkVersion", 24) as int)
+        targetSdkVersion getExtOrDefault("targetSdkVersion", 35)
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += [
+                "${sdkRoot}/core/android/src/main/java",
+                "${sdkRoot}/qring/android/src/main/java",
+                "${sdkRoot}/gloryfit/android/src/main/java",
+                "${sdkRoot}/veepoo/android/src/main/java",
+                "${sdkRoot}/standard/android/src/main/java",
+            ]
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = "17" }
+}
+
+react {
+    jsRootDir = file("../src/")
+    libraryName = "RNSmartWearSpec"
+    codegenJavaPackageName = "com.smartwear.rn"
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation "com.facebook.react:react-android"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0"
+}

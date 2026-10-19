@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>SmartWear Lab · Liquid Glass (vòng 2)</title>
+<!-- Font: Inter Tight (số lớn, tiêu đề) + Inter (thân) thay cho SF Pro (không được phép dùng trên Android). Mono chỉ trong "Chi tiết kỹ thuật". -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#060607;color:#fff;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{width:1760px;height:1000px;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.canvas{width:1760px;height:1000px;padding:20px 18px 0;background:radial-gradient(1400px 520px at 50% -12%,#18181b,#060607 72%)}
+.top{display:flex;justify-content:space-between;align-items:baseline;padding:0 8px 16px}
+.top h1{font:600 20px 'Inter Tight';letter-spacing:-.015em}
+.top h1 span{color:#a1a1a6;font-weight:500}
+.top p{font:400 13px Inter;color:#a1a1a6}
+.row{display:flex;gap:24px}
+.lbl{font:500 13px Inter;color:#a1a1a6;margin:0 0 10px 10px}
+.lbl b{color:#f5f5f7;font-weight:600;margin-right:6px}
+
+/* ---------- app layer ---------- */
+.app{position:relative;height:100%;overflow:hidden;background:#050506}
+.app::after{content:'';position:absolute;left:0;right:0;bottom:0;height:140px;background:linear-gradient(rgba(5,5,6,0),rgba(5,5,6,.62) 50%,rgba(5,5,6,.96));pointer-events:none;z-index:5}
+.scroll{position:absolute;inset:0;overflow-y:auto;padding:14px 20px 168px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.t-cap{font:500 13px Inter;color:rgba(235,235,245,.7);margin-bottom:4px}
+.t-large{font:700 32px/1.1 'Inter Tight';letter-spacing:-.025em}
+.t-title{font:600 19px/1.25 'Inter Tight';letter-spacing:-.01em}
+.t-h{font:600 20px/1.2 'Inter Tight';letter-spacing:-.015em;margin:28px 4px 12px}
+.t-body{font:400 16px/1.4 Inter}
+.sec{color:rgba(235,235,245,.72)}
+.num{font-family:'Inter Tight';font-variant-numeric:tabular-nums;letter-spacing:-.045em}
+.hdr{display:flex;justify-content:space-between;align-items:flex-end;margin:6px 0 22px}
+
+/* ---------- colour fields (content layer: each device's signal) ---------- */
+.field{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;width:95%;aspect-ratio:1;border-radius:50%;filter:blur(30px);opacity:.78;will-change:transform}
+.b1{top:-38%;left:-28%;animation:d1 19s ease-in-out infinite alternate}
+.b2{top:-18%;right:-48%;animation:d2 24s ease-in-out infinite alternate}
+.b3{bottom:-55%;left:4%;animation:d3 29s ease-in-out infinite alternate;opacity:.9}
+@keyframes d1{0%{transform:translate(0,0) scale(1)}50%{transform:translate(14%,10%) scale(1.14)}100%{transform:translate(-6%,18%) scale(.94)}}
+@keyframes d2{0%{transform:translate(0,0) scale(1.05)}50%{transform:translate(-16%,14%) scale(.9)}100%{transform:translate(-8%,-6%) scale(1.12)}}
+@keyframes d3{0%{transform:translate(0,0) scale(1)}50%{transform:translate(12%,-14%) scale(1.1)}100%{transform:translate(-10%,-4%) scale(.96)}}
+.live{animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.8}}
+
+/* ---------- Liquid Glass (functional layer only: controls & navigation) ---------- */
+.glass{position:relative;isolation:isolate;
+  background:linear-gradient(150deg,rgba(255,255,255,.17),rgba(255,255,255,.05) 42%,rgba(255,255,255,.09)),rgba(34,34,38,.42);
+  -webkit-backdrop-filter:blur(22px) saturate(190%);backdrop-filter:blur(22px) saturate(190%);
+  box-shadow:inset 0 1px .5px rgba(255,255,255,.42),inset 0 -1px 1px rgba(255,255,255,.08),0 10px 30px rgba(0,0,0,.38),0 1px 3px rgba(0,0,0,.3)}
+.glass::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:-1;
+  background:linear-gradient(165deg,rgba(255,255,255,.6),rgba(255,255,255,.06) 35%,rgba(255,255,255,0) 60%,rgba(255,255,255,.28));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.glass::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
+  background:radial-gradient(120% 70% at 22% -20%,rgba(255,255,255,.2),transparent 55%)}
+.gbtn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:22px;font:600 15px Inter;transition:transform .25s cubic-bezier(.3,1.4,.5,1)}
+.gbtn:active{transform:scale(.96)}
+.gbtn.sm{height:38px;padding:0 15px;border-radius:19px;font-size:14px}
+.gbtn.circle{width:44px;padding:0;justify-content:center}
+.gbtn.big{height:54px;border-radius:27px;font-size:16px;width:100%;justify-content:center}
+.tint{background:linear-gradient(150deg,rgba(255,255,255,.2),rgba(255,255,255,.03) 50%,rgba(255,255,255,.08)),var(--tint)}
+
+/* tab bar: inset capsule, minimises on scroll, morphs with accessory */
+.tabwrap{position:absolute;left:16px;right:16px;bottom:14px;display:flex;gap:10px;align-items:center;z-index:10}
+.tabbar{display:flex;height:62px;border-radius:31px;padding:5px;flex:1 1 auto;transition:flex-basis .5s cubic-bezier(.3,1.25,.5,1),width .5s cubic-bezier(.3,1.25,.5,1)}
+.tabbar.min{flex:0 0 62px}
+.tab{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:26px;color:rgba(235,235,245,.72);font:500 12px Inter;transition:all .4s cubic-bezier(.3,1.25,.5,1);overflow:hidden;white-space:nowrap}
+.tab svg{width:22px;height:22px;flex:none}
+.tab.on{color:#fff;background:rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}
+.tabbar.min .tab:not(.on){flex:0 0 0;opacity:0;padding:0}
+.tabbar.min .tab span{display:none}
+.acc{height:56px;border-radius:28px;display:flex;align-items:center;justify-content:center;gap:10px;font:600 16px Inter;flex:1 1 auto;transition:all .45s cubic-bezier(.3,1.25,.5,1)}
+.tabwrap.stack{flex-direction:column-reverse;align-items:stretch}
+.tabwrap.stack .tabbar{flex:0 0 62px}
+
+/* ---------- content surfaces ---------- */
+.card{position:relative;border-radius:30px;overflow:hidden;background:#121214;margin-bottom:12px;cursor:pointer;transition:transform .3s cubic-bezier(.3,1.3,.5,1)}
+.card:active{transform:scale(.985)}
+.scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.5));pointer-events:none}
+.cin{position:relative;padding:20px 20px 18px}
+.surface{background:rgba(28,28,30,.86);border-radius:24px;overflow:hidden}
+.li{display:flex;align-items:center;gap:14px;min-height:64px;padding:10px 18px;position:relative}
+.li+.li::before{content:'';position:absolute;top:0;left:56px;right:0;height:.5px;background:rgba(84,84,88,.6)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.ph{flex:none;border-radius:50%;background:radial-gradient(circle,transparent 36%,#5b5b60 38%,#8e8e93 50%,#48484a 62%,#2c2c2e 70%,transparent 72%)}
+.ph.sq{border-radius:30%;background:linear-gradient(160deg,#636366,#2c2c2e)}
+.batt{display:inline-flex;align-items:center;gap:6px;font:500 14px Inter;color:rgba(235,235,245,.85)}
+.batt i{width:24px;height:12px;border-radius:4px;box-shadow:inset 0 0 0 1.2px rgba(235,235,245,.6);padding:2px;display:inline-flex}
+.batt i b{display:block;height:100%;border-radius:2px;background:#fff}
+.chk{width:26px;height:26px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1.6px rgba(235,235,245,.45);display:flex;align-items:center;justify-content:center;transition:all .25s}
+.chk.on{box-shadow:none;background:#fff;color:#000}
+.spin{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.18);border-top-color:#fff;animation:sp 0.9s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ticker{display:flex;align-items:flex-end;gap:4px;height:28px}
+.ticker i{width:5px;border-radius:3px;animation:tin .5s ease-out both;transition:height .3s}
+@keyframes tin{from{opacity:0;transform:translateY(4px)}}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:rgba(28,28,30,.86);border-radius:22px;padding:15px 16px;min-height:84px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;transition:transform .25s,box-shadow .25s}
+.tile:active{transform:scale(.97)}
+.tile.sel{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
+.tile .n{font:600 15px Inter;display:flex;align-items:center;gap:8px}
+.tile .v{font:400 15px Inter;color:rgba(235,235,245,.72);margin-top:8px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:12px 18px;font:400 15px Inter}
+.kv+.kv{box-shadow:inset 0 .5px 0 rgba(84,84,88,.6)}
+.kv span:first-child{color:rgba(235,235,245,.72)}
+.kv span:last-child{text-align:right}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;letter-spacing:0}
+.hexl{padding:10px 18px;box-shadow:inset 0 .5px 0 rgba(84,84,88,.6)}
+.hexl .mono{color:#f5f5f7;display:block;word-break:break-all}
+.hexl small{font:400 13px Inter;color:rgba(235,235,245,.72)}
+.toast{position:absolute;top:12px;left:50%;transform:translate(-50%,-8px);opacity:0;z-index:20;padding:12px 18px;border-radius:24px;font:500 14px Inter;width:max-content;max-width:330px;text-align:center;transition:all .35s cubic-bezier(.3,1.3,.5,1);pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.seg{display:flex;padding:4px;border-radius:24px;height:48px}
+.seg button{flex:1;border-radius:20px;font:500 15px Inter;color:rgba(235,235,245,.75);transition:all .35s cubic-bezier(.3,1.25,.5,1)}
+.seg button.on{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.slot{flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.12)}
+.mx{display:grid;grid-template-columns:1.25fr 1fr .8fr .8fr .8fr;align-items:center;column-gap:6px}
+.mx>div{padding:12px 0;font:400 14px Inter}
+.mx .h{font:500 12px Inter;color:rgba(235,235,245,.72);padding:12px 0 8px}
+.pill{font:500 12px Inter;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,.12);color:rgba(235,235,245,.85)}
+.tg{transition:transform .35s}
+.tg.open{transform:rotate(90deg)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js" crossorigin></script>
+<script type="text/babel" data-presets="react">
+const {useState,useEffect,useRef} = React;
+
+/* ===== AndroidFrame — copied verbatim from huashu-design/assets/android_frame.jsx ===== */
+const androidFrameStyles = {
+  wrapper:{display:'inline-block',padding:10,background:'#1a1a1a',borderRadius:44,boxShadow:'0 0 0 2px #2a2a2a, 0 20px 60px rgba(0,0,0,0.3)',position:'relative'},
+  screen:{position:'relative',borderRadius:36,overflow:'hidden',background:'#fff'},
+  statusBar:{position:'absolute',top:0,left:0,right:0,height:32,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 24px',fontSize:14,fontWeight:500,fontFamily:'Roboto, -apple-system, sans-serif',zIndex:20,pointerEvents:'none'},
+  punchHole:{position:'absolute',top:10,left:'50%',transform:'translateX(-50%)',width:14,height:14,background:'#000',borderRadius:'50%',zIndex:30},
+  statusIcons:{display:'flex',alignItems:'center',gap:6},
+  batteryText:{fontSize:11,fontWeight:600,marginLeft:2},
+  content:{position:'absolute',top:32,left:0,right:0,bottom:24,overflow:'auto'},
+  navBar:{position:'absolute',bottom:0,left:0,right:0,height:24,display:'flex',alignItems:'center',justifyContent:'center',gap:60,zIndex:10},
+  navButton:{width:36,height:4,background:'rgba(0,0,0,0.3)',borderRadius:999},
+};
+function AndroidFrame({children,width=412,height=892,time='9:41',battery=100,darkMode=false,navStyle='gesture'}){
+  const textColor = darkMode ? '#fff' : '#1a1a1a';
+  return (
+    <div style={androidFrameStyles.wrapper}>
+      <div style={{...androidFrameStyles.screen,width,height,background:darkMode?'#000':'#fff'}}>
+        <div style={{...androidFrameStyles.statusBar,color:textColor}}>
+          <span>{time}</span>
+          <div style={androidFrameStyles.statusIcons}>
+            <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2" height="4" rx="0.5"/><rect x="4" y="4" width="2" height="6" rx="0.5"/><rect x="8" y="2" width="2" height="8" rx="0.5"/><rect x="12" y="0" width="2" height="10" rx="0.5"/></svg>
+            <svg width="14" height="10" viewBox="0 0 14 10" fill="none"><path d="M7 9a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/><path d="M3 6a5 5 0 018 0" stroke="currentColor" strokeWidth="1.2"/><path d="M0.5 3.5a11 11 0 0113 0" stroke="currentColor" strokeWidth="1.2" opacity="0.6"/></svg>
+            <div style={{width:22,height:10,border:'1.5px solid currentColor',borderRadius:2,padding:1,position:'relative'}}><div style={{width:`${battery}%`,height:'100%',background:'currentColor',borderRadius:1}}/></div>
+            <span style={androidFrameStyles.batteryText}>{battery}%</span>
+          </div>
+        </div>
+        <div style={androidFrameStyles.punchHole}/>
+        <div style={androidFrameStyles.content}>{children}</div>
+        {navStyle==='gesture' && (<div style={androidFrameStyles.navBar}><div style={{...androidFrameStyles.navButton,width:100,height:4,background:darkMode?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}}/></div>)}
+      </div>
+    </div>
+  );
+}
+
+/* ===== Real data (spec.md §4). Nothing invented: unknowns are "chưa đo". ===== */
+const DEV = {
+  r09:{id:'r09',name:'Colmi R09',short:'R09',kind:'Nhẫn',sdk:'QRing',ble:'R09_8404',mac:'30:32:43:31:84:04',hw:'RT09_V3.1',fw:'RT09_3.10.22_260420',
+       caps:['hr','spo2','temp','stress','hrv','sleep','gesture'],battery:19,rssi:'−70 đến −82 dBm',hues:['#FF5A36','#FF9F0A','#B3122A']},
+  hs:{id:'hs',name:'HS500A',short:'HS500A',kind:'Chưa rõ loại',sdk:'QRing',ble:'chưa ghi',mac:'32:35:45:37:4E:00',hw:'HS500A_V1.0',fw:'HS500A_1.00.05_260725',
+       caps:['hr','spo2','bp','stress','hrv','cycle'],battery:null,rssi:'chưa đo',hues:['#14B8A6','#0A84FF','#0B5568'],missing:'Nhiệt độ, màn hình'},
+  coros:{id:'coros',name:'COROS PACE 3',short:'COROS',kind:'Đồng hồ',sdk:null,ble:'COROS PACE 3 8E1086',mac:'F7:AF:2F:22:09:90',
+       caps:[],hues:['#636366','#3A3A3C','#48484A'],reason:'Quét thấy (phát FEE7) nhưng chưa có SDK'},
+};
+const ORDER = ['r09','hs','coros'];
+const MET = {
+  hr:{label:'Nhịp tim',unit:'bpm',col:'#FF453A',seq:[79,80,80,81,82,81,80,79],dur:50},   // 79–82 bpm, ~25 s
+  spo2:{label:'SpO2',unit:'%',col:'#0A84FF',seq:[97,98,98,99,98,97],dur:52},             // 97–99 %, ~26 s
+  temp:{label:'Nhiệt độ',unit:'°C',col:'#FF9F0A',dur:52},                                // 36,6 °C at stop, ~26 s
+  bp:{label:'Huyết áp',unit:'mmHg',col:'#FF375F'},
+  stress:{label:'Stress',col:'#64D2FF'},
+  hrv:{label:'HRV',unit:'ms',col:'#30D158'},
+  sleep:{label:'Giấc ngủ',col:'#40C8E0'},
+  gesture:{label:'Cử chỉ chạm',col:'#98989D'},
+  cycle:{label:'Chu kỳ kinh nguyệt',col:'#FF6482'},
+};
+// Only these have real results to replay: R09 hr/spo2/temp; HS500A hr -> "Chưa đeo".
+const canRun = (d,m) => (d==='r09' && ['hr','spo2','temp'].includes(m)) || (d==='hs' && m==='hr');
+const hx = n => n.toString(16).toUpperCase().padStart(2,'0');
+// Real HR frame format: 69 01 00 <bpm> 00 00 FA 02 00…00 <sum & 0xFF>  (sample HR 79 -> B5 checks out)
+const hrPkt = v => { const b=[0x69,1,0,v,0,0,0xFA,2,0,0,0,0,0,0,0]; return [...b,b.reduce((a,c)=>a+c,0)&255].map(hx).join(' '); };
+const SEED = [
+  {hex:'73 0C 13',note:'Thông báo pin · 19 %'},
+  {hex:'6A 0B A6 …',note:'Dừng đo nhiệt độ · 36,6 °C'},
+  {hex:'69 01 00 4F 00 00 FA 02 00 00 00 00 00 00 00 B5',note:'Nhịp tim 79 bpm'},
+];
+const vn = s => String(s).replace('.',',');
+
+/* ===== per-phone simulated world: packets every 0.5 s ===== */
+function step(w){
+  const live = Object.keys(w.run).filter(d=>!w.run[d].end);
+  if(!live.length) return w;
+  const run={...w.run}, last={...w.last}, log={...w.log};
+  live.forEach(d=>{
+    const r=run[d], m=MET[r.m], n=r.n+1;
+    if(d==='hs'){                       // real: HS500A answers "Chưa đeo"
+      if(n>=2){ run[d]={...r,n,end:'Chưa đeo'}; last.hs={...last.hs,[r.m]:'Chưa đeo'};
+        log.hs=[{hex:'—',note:'Thiết bị báo: chưa đeo'},...log.hs].slice(0,10); }
+      else run[d]={...r,n,hist:[...r.hist,null]};
+      return;
+    }
+    const v = m.seq ? m.seq[n % m.seq.length] : null;
+    const hist=[...r.hist,v].slice(-28);
+    if(r.m==='hr') log[d]=[{hex:hrPkt(v),note:'Nhịp tim '+v+' bpm'},...log[d]].slice(0,10);
+    if(n>=m.dur){
+      const vals=hist.filter(x=>x!=null), lo=Math.min(...vals), hi=Math.max(...vals);
+      const res = r.m==='temp' ? '36,6' : (lo===hi?String(lo):lo+'–'+hi);
+      if(r.m==='temp') log[d]=[SEED[1],...log[d]].slice(0,10);
+      last[d]={...last[d],[r.m]:res}; run[d]={...r,n,v,hist,end:'Hoàn tất'};
+    } else run[d]={...r,n,v,hist};
+  });
+  return {...w,run,last,log};
+}
+function useWorld(init={}){
+  const [w,setW]=useState(()=>({
+    conn:{r09:'connected',hs:'connected',coros:'unsupported',...(init.conn||{})},
+    last:{r09:{hr:'79–82',spo2:'97–99',temp:'36,6'},hs:{hr:'Chưa đeo'},coros:{}},
+    run:{}, log:{r09:SEED,hs:[],coros:[]},
+  }));
+  const [toast,setToast]=useState(null);
+  const tRef=useRef();
+  useEffect(()=>{const id=setInterval(()=>setW(step),500);return()=>clearInterval(id)},[]);
+  const say=msg=>{setToast(msg);clearTimeout(tRef.current);tRef.current=setTimeout(()=>setToast(null),2400)};
+  const act={
+    say,
+    start:(d,m)=>{ if(!canRun(d,m)){ say(`${MET[m].label} trên ${DEV[d].short}: chưa có số đo thật`); return false; }
+      setW(w=>({...w,run:{...w.run,[d]:{m,n:0,v:null,hist:[]}}})); return true; },
+    stop:d=>setW(w=>{const run={...w.run};delete run[d];return {...w,run}}),
+    bulk:m=>{ const ds=ORDER.filter(d=>w.conn[d]==='connected'&&DEV[d].caps.includes(m));
+      setW(w=>{const run={...w.run};ds.forEach(d=>{ if(canRun(d,m)) run[d]={m,n:0,v:null,hist:[]}; });return {...w,run}});
+      say(`Đo đồng loạt ${MET[m].label.toLowerCase()} · ${ds.length} thiết bị`); },
+    connect:ids=>{ setW(w=>{const conn={...w.conn};ids.forEach(d=>conn[d]='connecting');return {...w,conn}});
+      ids.forEach((d,i)=>setTimeout(()=>setW(w=>({...w,conn:{...w.conn,[d]:'connected'}})),1300+i*600)); },
+    disconnect:d=>setW(w=>{const run={...w.run};delete run[d];return {...w,run,conn:{...w.conn,[d]:'disconnected'}}}),
+  };
+  return [w,act,toast];
+}
+const isLive = (w,d) => w.run[d] && !w.run[d].end;
+function statusText(w,d){
+  const c=w.conn[d];
+  if(c==='unsupported') return 'Chưa hỗ trợ';
+  if(c==='connecting') return 'Đang kết nối…';
+  if(c==='disconnected') return 'Chưa kết nối';
+  if(isLive(w,d)) return 'Đang đo '+MET[w.run[d].m].label.toLowerCase();
+  return 'Đã kết nối';
+}
+const statusCol = (w,d) => ({connected:'#30D158',connecting:'#FFD60A',disconnected:'#8E8E93',unsupported:'#8E8E93'})[w.conn[d]];
+
+/* ===== small parts ===== */
+const I = ({d,s=22,w=1.8}) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
+const IC = {
+  dev:<><rect x="4" y="4" width="7" height="7" rx="2.2"/><rect x="13" y="4" width="7" height="7" rx="2.2"/><rect x="4" y="13" width="7" height="7" rx="2.2"/><rect x="13" y="13" width="7" height="7" rx="2.2"/></>,
+  add:<><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M8 12h8"/></>,
+  mon:<path d="M3 12h4l2.5-6 5 12 2.5-6h4"/>,
+  back:<path d="M15 5l-7 7 7 7"/>, chev:<path d="M9 6l6 6-6 6"/>, check:<path d="M5 12.5l4.5 4.5L19 7"/>,
+};
+const Field = ({hues,live,style}) => (
+  <div className={'field'+(live?' live':'')} style={style}>
+    {hues.map((h,i)=><i key={i} className={'blob b'+(i+1)} style={{background:`radial-gradient(circle, ${h} 0%, ${h}00 68%)`}}/>)}
+  </div>);
+const Batt = ({v}) => v==null ? <span className="batt">Pin chưa đo</span> :
+  <span className="batt"><i><b style={{width:Math.max(v,12)+'%'}}/></i>{v}%</span>;
+const Ph = ({d,s=40}) => d==='r09' ? <div className="ph" style={{width:s,height:s}} title="ảnh R09 · placeholder"/> :
+  <div className="ph sq" style={{width:s,height:s}} title={'ảnh '+DEV[d].short+' · placeholder'}/>;
+function Ticker({hist=[],col,slots=28,h=28}){
+  const vals=hist.filter(v=>v!=null), lo=Math.min(...vals,999), hi=Math.max(...vals,0);
+  const pad=Array(Math.max(0,slots-hist.length)).fill(undefined);
+  const off=hist.length;
+  return <div className="ticker" style={{height:h}}>
+    {pad.map((_,i)=><i key={'p'+i} style={{height:4,background:'rgba(255,255,255,.14)',animation:'none'}}/>)}
+    {hist.slice(-slots).map((v,i)=><i key={off-Math.min(slots,hist.length)+i} style={{height:v==null?8:(hi>lo?10+(v-lo)/(hi-lo)*(h-10):h*.7),background:v==null?'rgba(255,255,255,.45)':col}}/>)}
+  </div>;
+}
+const Toast = ({msg}) => <div className={'toast glass'+(msg?' on':'')}>{msg||' '}</div>;
+const TABS=[{id:'fleet',label:'Thiết bị',ic:IC.dev},{id:'scan',label:'Thêm',ic:IC.add},{id:'lab',label:'Giám sát',ic:IC.mon}];
+function TabBar({tab,onTab,min,setMin,acc}){
+  const stack = acc && !min;
+  return <div className={'tabwrap'+(stack?' stack':'')}>
+    <div className={'glass tabbar'+(min?' min':'')}>
+      {TABS.map(t=><button key={t.id} className={'tab'+(t.id===tab?' on':'')} onClick={()=>min?setMin(false):onTab(t.id)}><I d={t.ic}/><span>{t.label}</span></button>)}
+    </div>
+    {acc}
+  </div>;
+}
+
+/* ===== A · Fleet ===== */
+function DevCard({w,act,d,open}){
+  const D=DEV[d], r=w.run[d], live=isLive(w,d), c=w.conn[d], hero=d==='r09';
+  const stop=e=>e.stopPropagation();
+  let big, cap;
+  if(c==='unsupported'){ big=null; cap=null; }
+  else if(live){ big = r.v!=null ? <span className="num" style={{fontSize:hero?76:44,fontWeight:500}}>{r.v}<small style={{fontSize:20,letterSpacing:0,marginLeft:8,fontWeight:500}} className="sec">{MET[r.m].unit}</small></span>
+      : <span style={{font:'600 26px Inter Tight'}}>Đang đo…</span>; cap=MET[r.m].label+' · trực tiếp, gói mỗi 0,5 s'; }
+  else if(d==='r09'){ big=<span className="num" style={{fontSize:76,fontWeight:500}}>79<small style={{fontSize:20,letterSpacing:0,marginLeft:8,fontWeight:500}} className="sec">bpm</small></span>; cap='Nhịp tim · lần đo gần nhất (79–82)'; }
+  else { big=<span style={{font:'600 28px Inter Tight',letterSpacing:'-.02em'}}>{w.last[d].hr||'chưa đo'}</span>; cap='Nhịp tim · kết quả lần đo gần nhất'; }
+  return <div className="card" onClick={()=>open(d)} style={{minHeight:hero?262:c==='unsupported'?0:168}}>
+    <Field hues={D.hues} live={live} style={{opacity:c==='connected'?1:.55}}/>
+    <div className="scrim"/>
+    <div className="cin">
+      <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <Ph d={d} s={38}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div className="t-title">{D.name}</div>
+          <div style={{font:'400 14px Inter',color:'rgba(255,255,255,.8)',display:'flex',alignItems:'center',gap:6,marginTop:2}}>
+            <span className="dot" style={{background:statusCol(w,d)}}/>{D.kind} · {statusText(w,d)}</div>
+        </div>
+        {c!=='unsupported' && <Batt v={D.battery}/>}
+      </div>
+      {big && <div style={{marginTop:hero?18:14,lineHeight:1}}>{big}</div>}
+      {cap && <div style={{font:'400 15px Inter',color:'rgba(255,255,255,.8)',marginTop:big?8:14}}>{cap}</div>}
+      {live && hero && <div style={{marginTop:12}}><Ticker hist={r.hist} col="#fff" slots={40} h={22}/></div>}
+      {c!=='unsupported' && <div style={{display:'flex',gap:8,marginTop:16}} onClick={stop}>
+        {c==='connected' && (live
+          ? <button className="glass gbtn sm" onClick={()=>act.stop(d)}>Dừng đo</button>
+          : <button className="glass gbtn sm" onClick={()=>act.start(d,'hr')}>Đo nhịp tim</button>)}
+        {c==='connected' ? <button className="glass gbtn sm" onClick={()=>act.disconnect(d)}>Ngắt</button>
+          : <button className="glass gbtn sm" onClick={()=>act.connect([d])}>{c==='connecting'?'Đang kết nối…':'Kết nối'}</button>}
+      </div>}
+    </div>
+  </div>;
+}
+function Fleet({w,act,open}){
+  const n=ORDER.filter(d=>w.conn[d]==='connected').length;
+  return <>
+    <div className="hdr">
+      <div><div className="t-cap">SmartWear Lab</div><div className="t-large">Thiết bị</div>
+        <div className="t-body sec" style={{marginTop:4}}>{n} đang kết nối</div></div>
+      <button className="glass gbtn" onClick={()=>act.bulk('hr')}>Đo đồng loạt</button>
+    </div>
+    {ORDER.map(d=><DevCard key={d} w={w} act={act} d={d} open={open}/>)}
+  </>;
+}
+
+/* ===== C · Device detail ===== */
+function Detail({w,act,id,setId,back,onScroll}){
+  const D=DEV[id], r=w.run[id], live=isLive(w,id), unsup=w.conn[id]==='unsupported';
+  const [m,setM]=useState(r?r.m:'hr');
+  const [tech,setTech]=useState(false);
+  useEffect(()=>{ setM(w.run[id]?w.run[id].m:(DEV[id].caps[0]||'hr')); },[id]);
+  const M=MET[m], cur = r && r.m===m ? r : null;
+  let hero, sub;
+  if(unsup){ hero=<span style={{font:'600 40px Inter Tight',letterSpacing:'-.025em'}}>Chưa hỗ trợ</span>; sub=D.reason; }
+  else if(cur && !cur.end){
+    hero = cur.v!=null ? <span className="num" style={{fontSize:104,fontWeight:500}}>{cur.v}</span> : <span className="num" style={{fontSize:104,fontWeight:400,opacity:.5}}>—</span>;
+    sub = id==='hs' ? 'Đang chờ thiết bị phản hồi…' : m==='temp' ? `Đang đo · ${vn(cur.n/2)} / ~26 s · kết quả khi dừng` : `Đang đo · ${vn((cur.n/2).toFixed(1))} / ~${M.dur/2} s`;
+  } else {
+    const v=w.last[id][m];
+    if(m==='sleep'){ hero=<span style={{font:'600 40px Inter Tight'}}>Sắp có</span>; sub='Đồng bộ dữ liệu giấc ngủ (giao thức mới)'; }
+    else if(v && /\d/.test(v)) { hero=<span className="num" style={{fontSize:v.length>3?84:104,fontWeight:500}}>{v}</span>; sub=cur&&cur.end?'Vừa hoàn tất · '+MET[m].label.toLowerCase():'Lần đo gần nhất · hôm nay'; }
+    else { hero=<span style={{font:'600 44px Inter Tight',letterSpacing:'-.025em'}}>{v||'chưa đo'}</span>; sub=v?'Kết quả thật khi đo nhịp tim':'Chưa có số đo thật'; }
+  }
+  const showUnit = !unsup && m!=='sleep' && ((cur && !cur.end && cur.v!=null) || /\d/.test((!cur||cur.end)?(w.last[id][m]||''):''));
+  return <>
+    <Field hues={D.hues} live={live} style={{height:560,WebkitMaskImage:'linear-gradient(#000 45%,transparent)',maskImage:'linear-gradient(#000 45%,transparent)',opacity:unsup?.6:.95}}/>
+    <div className="scroll" onScroll={onScroll} style={{paddingTop:78}}>
+      <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <Ph d={id} s={46}/>
+        <div><div className="t-title" style={{fontSize:22}}>{D.name}</div>
+          <div style={{font:'400 15px Inter',color:'rgba(255,255,255,.8)',marginTop:2}}>{D.kind} · {statusText(w,id)}{D.battery!=null?` · Pin ${D.battery}%`:''}</div></div>
+      </div>
+      <div style={{marginTop:34,display:'flex',alignItems:'center',gap:8,font:'500 16px Inter',color:'rgba(255,255,255,.9)'}}>
+        {!unsup && <span className="dot" style={{background:M.col,width:10,height:10}}/>}{unsup?'Trạng thái':M.label}</div>
+      <div style={{minHeight:110,display:'flex',alignItems:'flex-end',marginTop:6}}><div style={{display:'flex',alignItems:'baseline',gap:10,lineHeight:1.02}}>
+        {hero}{showUnit && M.unit && <span style={{font:'500 24px Inter',color:'rgba(255,255,255,.75)'}}>{M.unit}</span>}
+      </div></div>
+      <div style={{font:'400 15px Inter',color:'rgba(255,255,255,.8)',marginTop:6}}>{sub}</div>
+      {!unsup && <>
+        <div style={{margin:'18px 0 18px'}}><Ticker hist={cur?cur.hist:[]} col={M.col} slots={44} h={30}/></div>
+        <button className={'glass gbtn big'+(live&&r.m===m?'':' tint')} style={{'--tint':M.col+'70'}} onClick={()=>live&&r.m===m?act.stop(id):act.start(id,m)}>
+          {live&&r.m===m?'Dừng đo':`Đo ${M.label.toLowerCase()}`}</button>
+        <div className="t-h">Chức năng</div>
+        <div className="grid">
+          {D.caps.map(k=>{const v=w.last[id][k]; const l=isLive(w,id)&&w.run[id].m===k;
+            return <button key={k} className={'tile'+(k===m?' sel':'')} onClick={()=>setM(k)}>
+              <span className="n"><span className="dot" style={{background:MET[k].col}}/>{MET[k].label}</span>
+              <span className="v">{l?'Đang đo…':k==='sleep'?'Đồng bộ · sắp có':v?(/\d/.test(v)?`${v} ${MET[k].unit||''}`:v):'chưa đo'}</span>
+            </button>;})}
+        </div>
+        <div className="surface" style={{marginTop:12}}>
+          <div className="li"><div style={{flex:1}}><div style={{font:'500 16px Inter'}}>Đồng bộ lịch sử</div><div style={{font:'400 14px Inter'}} className="sec">Tải dữ liệu đã lưu trên thiết bị</div></div><span className="pill">Sắp có</span></div>
+        </div>
+      </>}
+      <div className="surface" style={{marginTop:unsup?28:12}}>
+        <button className="li" style={{width:'100%',textAlign:'left'}} onClick={()=>setTech(!tech)}>
+          <div style={{flex:1,font:'500 16px Inter'}}>Chi tiết kỹ thuật</div>
+          <span className={'tg sec'+(tech?' open':'')}><I d={IC.chev} s={18}/></span>
+        </button>
+        {tech && <>
+          {[['Tên BLE',D.ble],['MAC',D.mac],['Phần cứng',D.hw||'—'],['Firmware',D.fw||'—'],['SDK',D.sdk||'Chưa có'],['RSSI',D.rssi||'—'],
+            ...(D.missing?[['Không hỗ trợ',D.missing]]:[]),['Ảnh thiết bị','placeholder']].map(([k,v])=>
+            <div className="kv" key={k}><span>{k}</span><span className={/MAC|BLE|Phần|Firm/.test(k)?'mono':''} style={{fontSize:/MAC|BLE|Phần|Firm/.test(k)?13:15}}>{v}</span></div>)}
+          <div className="kv"><span>Gói tin gần nhất</span><span className="sec" style={{fontSize:13}}>mới nhất trên cùng</span></div>
+          {(w.log[id].length?w.log[id]:[{hex:'—',note:'Chưa có gói'}]).slice(0,6).map((l,i)=>
+            <div className="hexl" key={i+l.hex}><span className="mono">{l.hex}</span><small>{l.note}</small></div>)}
+        </>}
+      </div>
+    </div>
+    <div style={{position:'absolute',top:12,left:16,right:16,display:'flex',gap:8,zIndex:9}}>
+      <button className="glass gbtn circle" style={{height:54,width:54,borderRadius:27}} onClick={back}><I d={IC.back}/></button>
+      <div className="glass" style={{flex:1,display:'flex',borderRadius:27,padding:4,height:54}}>
+        {ORDER.map(d=>{const on=d===id;return <button key={d} onClick={()=>setId(d)} style={{flex:1,borderRadius:23,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+          background:on?'rgba(255,255,255,.16)':'transparent',boxShadow:on?'inset 0 1px 0 rgba(255,255,255,.25)':'none',transition:'all .35s'}}>
+          <span style={{font:'600 14px Inter',display:'flex',alignItems:'center',gap:6}}><span className={'dot'+(isLive(w,d)?' live':'')} style={{background:DEV[d].hues[0]}}/>{DEV[d].short}</span>
+          <span style={{font:'500 12px Inter',color:'rgba(235,235,245,.75)'}}>{isLive(w,d)?'Đang đo':d==='hs'&&w.conn.hs==='connected'?'Chưa đeo':statusText(w,d)}</span>
+        </button>})}
+      </div>
+    </div>
+  </>;
+}
+
+/* ===== B · Scan & add ===== */
+function Scan({w,act,preselect,goFleet,tabProps}){
+  const [found,setFound]=useState([]); const [scanning,setScanning]=useState(true);
+  const [sel,setSel]=useState([]); const [done,setDone]=useState(0);
+  const run=()=>{ setFound([]); setScanning(true);
+    ['r09','hs','coros'].forEach((d,i)=>setTimeout(()=>{ setFound(f=>f.includes(d)?f:[...f,d]);
+      if(preselect && d!=='coros' && w.conn[d]!=='connected') setSel(s=>s.includes(d)?s:[...s,d]); },500+i*450));
+    setTimeout(()=>setScanning(false),2100); };
+  useEffect(run,[]);
+  const toggle=d=>setSel(s=>s.includes(d)?s.filter(x=>x!==d):[...s,d]);
+  const connect=()=>{ act.connect(sel); setDone(sel.length); setSel([]); };
+  const busy=ORDER.some(d=>w.conn[d]==='connecting');
+  const Row=({d})=>{const c=w.conn[d], un=c==='unsupported', on=sel.includes(d);
+    return <div className="li" onClick={()=>!un&&c!=='connected'&&c!=='connecting'&&toggle(d)} style={{cursor:un?'default':'pointer',animation:'tin .5s ease-out both'}}>
+      {un ? <div className="chk" style={{opacity:.35}}/> : c==='connecting' ? <div className="spin"/> : c==='connected'
+        ? <div className="chk on" style={{background:'#30D158',color:'#000'}}><I d={IC.check} s={16} w={2.6}/></div>
+        : <div className={'chk'+(on?' on':'')}>{on&&<I d={IC.check} s={16} w={2.6}/>}</div>}
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{font:'500 17px Inter',color:un?'#98989D':'#fff'}}>{DEV[d].name}</div>
+        <div style={{font:'400 14px Inter',color:un?'#8E8E93':'rgba(235,235,245,.72)',marginTop:2}}>{un?'Đồng hồ · phát FEE7, chưa có SDK':`${DEV[d].kind} · ${statusText(w,d)}`}</div>
+      </div>
+      <span className="dot" style={{background:DEV[d].hues[0],opacity:un?.5:1,width:10,height:10}}/>
+    </div>;};
+  const q=found.filter(d=>DEV[d].sdk), u=found.filter(d=>!DEV[d].sdk);
+  const acc = sel.length ? <button className="glass acc tint" style={{'--tint':'rgba(10,132,255,.42)'}} onClick={connect}>Kết nối song song {sel.length} thiết bị</button>
+    : (done && !busy) ? <button className="glass acc" onClick={goFleet}>Đã kết nối {done} thiết bị · Xem</button>
+    : busy ? <div className="glass acc"><div className="spin"/>Đang kết nối song song…</div> : null;
+  return <>
+    <Field hues={['#0A84FF','#14B8A6','#0B3A5C']} live={scanning} style={{height:380,opacity:.55,WebkitMaskImage:'linear-gradient(#000 30%,transparent)',maskImage:'linear-gradient(#000 30%,transparent)'}}/>
+    <div className="scroll" onScroll={tabProps.onScroll}>
+      <div className="hdr">
+        <div><div className="t-cap">SmartWear Lab</div><div className="t-large">Thêm thiết bị</div></div>
+        <button className="glass gbtn" onClick={run}>{scanning?'Đang quét…':'Quét lại'}</button>
+      </div>
+      <div style={{display:'flex',alignItems:'baseline',gap:12,margin:'8px 4px 4px'}}>
+        <span className="num" style={{fontSize:96,fontWeight:500,lineHeight:1}}>{found.length}</span>
+        <span style={{font:'500 18px Inter',color:'rgba(255,255,255,.85)'}}>thiết bị ở gần</span>
+      </div>
+      <div className="t-body sec" style={{margin:'0 4px 24px'}}>{scanning?'Đang quét BLE…':'Quét xong · chọn nhiều để kết nối cùng lúc'}</div>
+      {q.length>0 && <><div style={{display:'flex',justifyContent:'space-between',margin:'0 6px 10px',font:'600 16px Inter'}}>QRing<span className="sec" style={{fontWeight:400,fontSize:14}}>{q.length} thiết bị · có SDK</span></div>
+        <div className="surface">{q.map(d=><Row key={d} d={d}/>)}</div></>}
+      {u.length>0 && <><div style={{display:'flex',justifyContent:'space-between',margin:'24px 6px 10px',font:'600 16px Inter'}}>Chưa hỗ trợ<span className="sec" style={{fontWeight:400,fontSize:14}}>{u.length} thiết bị</span></div>
+        <div className="surface">{u.map(d=><Row key={d} d={d}/>)}</div></>}
+      <div className="sec" style={{font:'400 13px Inter',margin:'14px 6px 0'}}>Thời gian kết nối trong bản mẫu là minh hoạ.</div>
+    </div>
+    <TabBar {...tabProps} acc={acc}/>
+  </>;
+}
+
+/* ===== D · Parallel monitoring / feasibility ===== */
+function Lab({w,act,tabProps}){
+  const [bm,setBm]=useState('hr');
+  const conn=ORDER.filter(d=>w.conn[d]==='connected');
+  const laneStatus=d=>{ const r=w.run[d];
+    if(w.conn[d]==='unsupported') return 'Chưa có SDK';
+    if(w.conn[d]!=='connected') return 'Chưa kết nối';
+    if(!DEV[d].caps.includes(bm)) return 'Không hỗ trợ';
+    if(r && r.m===bm){ if(r.end) return d==='hs'?'Chưa đeo':`${w.last[d][bm]} ${MET[bm].unit}`;
+      return r.v!=null?`${r.v} ${MET[bm].unit}`:d==='hs'?'Đang chờ…':'Đang đo…'; }
+    if(!canRun(d,bm)) return 'chưa đo';
+    return 'Sẵn sàng'; };
+  const live=conn.some(d=>isLive(w,d));
+  const acc=<button className={'glass acc'+(live?'':' tint')} style={{'--tint':MET[bm].col+'70'}} onClick={()=>live?ORDER.forEach(act.stop):act.bulk(bm)}>
+    {live?'Dừng tất cả':`Đo đồng loạt · ${MET[bm].label}`}</button>;
+  const M=[['r09','−70…−82','~2','chưa đo','chưa đo'],['hs','chưa đo','chưa đo','chưa đo','chưa đo'],['coros','—','—','—','—']];
+  return <>
+    <Field hues={['#FF5A36','#14B8A6','#0B3A5C']} style={{height:360,opacity:.5,WebkitMaskImage:'linear-gradient(#000 30%,transparent)',maskImage:'linear-gradient(#000 30%,transparent)'}}/>
+    <div className="scroll" onScroll={tabProps.onScroll}>
+      <div className="hdr"><div><div className="t-cap">SmartWear Lab</div><div className="t-large">Giám sát</div></div></div>
+      <div style={{display:'flex',alignItems:'baseline',gap:6,margin:'0 4px'}}>
+        <span className="num" style={{fontSize:96,fontWeight:500,lineHeight:1}}>{conn.length}</span>
+        <span className="num" style={{fontSize:40,fontWeight:500,color:'rgba(235,235,245,.6)'}}>/ 7</span>
+        <span style={{font:'500 17px Inter',color:'rgba(255,255,255,.85)',marginLeft:10}}>kết nối</span>
+      </div>
+      <div style={{display:'flex',gap:6,margin:'14px 4px 10px'}}>
+        {Array.from({length:7},(_,i)=><div key={i} className="slot" style={conn[i]?{background:`linear-gradient(90deg,${DEV[conn[i]].hues[0]},${DEV[conn[i]].hues[1]})`}:{}}/>)}
+      </div>
+      <div className="t-body sec" style={{margin:'0 4px'}}>Android thường giới hạn khoảng 7 kết nối GATT đồng thời.</div>
+
+      <div className="t-h">Đo đồng loạt</div>
+      <div className="glass seg">{['hr','spo2','temp'].map(k=><button key={k} className={k===bm?'on':''} onClick={()=>setBm(k)}>{MET[k].label}</button>)}</div>
+      <div className="surface" style={{marginTop:12}}>
+        {ORDER.map(d=>{const r=w.run[d]; const st=laneStatus(d); const ok=/\d/.test(st);
+          return <div className="li" key={d} style={{flexDirection:'column',alignItems:'stretch',gap:8,padding:'14px 18px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <span className={'dot'+(isLive(w,d)?' live':'')} style={{background:DEV[d].hues[0],width:10,height:10}}/>
+              <span style={{flex:1,font:'500 16px Inter',color:w.conn[d]==='connected'?'#fff':'#98989D'}}>{DEV[d].name}</span>
+              <span className={ok?'num':''} style={ok?{font:'600 19px Inter Tight',letterSpacing:'-.02em'}:{font:'400 15px Inter',color:st==='Chưa đeo'?'#FFB340':'rgba(235,235,245,.72)'}}>{st}</span>
+            </div>
+            {r && r.m===bm && d==='r09' && <Ticker hist={r.hist} col={MET[bm].col} slots={46} h={20}/>}
+          </div>;})}
+      </div>
+
+      <div className="t-h">Chỉ số kết nối</div>
+      <div className="surface" style={{padding:'2px 18px 4px'}}>
+        <div className="mx">
+          <div className="h">Thiết bị</div><div className="h">RSSI dBm</div><div className="h">Gói/s</div><div className="h">Lỗi</div><div className="h">Trễ</div>
+          {M.map(([d,...c])=>[<div key={d} style={{font:'500 15px Inter',display:'flex',alignItems:'center',gap:8}}><span className="dot" style={{background:DEV[d].hues[0]}}/>{DEV[d].short}</div>,
+            ...c.map((v,i)=><div key={d+i} className={v==='chưa đo'||v==='—'?'sec':'num'} style={v==='chưa đo'||v==='—'?{}:{fontSize:16,letterSpacing:'-.01em'}}>{v}</div>)])}
+        </div>
+      </div>
+      <div className="sec" style={{font:'400 13px/1.45 Inter',margin:'10px 6px 0'}}>~2 gói/s suy ra từ chu kỳ gói 0,5 s của R09. Lỗi, timeout và độ trễ khi chạy song song: chưa đo.</div>
+    </div>
+    <TabBar {...tabProps} acc={acc}/>
+  </>;
+}
+
+/* ===== one phone = one independent state machine ===== */
+function AppPhone({initial,detail,world,auto}){
+  const [w,act,toast]=useWorld(world);
+  const [tab,setTab]=useState(initial);
+  const [det,setDet]=useState(detail||null);
+  const [min,setMin]=useState(false);
+  const lastY=useRef(0);
+  useEffect(()=>{ if(auto) setTimeout(()=>auto(act),600); },[]);
+  const onScroll=e=>{const y=e.currentTarget.scrollTop;
+    if(y>40&&y>lastY.current+3) setMin(true); else if(y<lastY.current-3) setMin(false); lastY.current=y;};
+  const onTab=t=>{setTab(t);setDet(null);setMin(false);lastY.current=0;};
+  const tabProps={tab,onTab,min,setMin,onScroll};
+  let body;
+  if(tab==='fleet' && det) body=<><Detail w={w} act={act} id={det} setId={setDet} back={()=>setDet(null)} onScroll={onScroll}/><TabBar {...tabProps}/></>;
+  else if(tab==='fleet') body=<>
+      <Field hues={['#FF5A36','#14B8A6','#B3122A']} style={{height:300,opacity:.35,WebkitMaskImage:'linear-gradient(#000 20%,transparent)',maskImage:'linear-gradient(#000 20%,transparent)'}}/>
+      <div className="scroll" onScroll={onScroll}><Fleet w={w} act={act} open={setDet}/></div><TabBar {...tabProps}/></>;
+  else if(tab==='scan') body=<Scan w={w} act={act} preselect={world&&world.preselect} goFleet={()=>onTab('fleet')} tabProps={tabProps}/>;
+  else body=<Lab w={w} act={act} tabProps={tabProps}/>;
+  return <AndroidFrame width={393} height={851} darkMode battery={72} time="10:24">
+    <div className="app">{body}<Toast msg={toast}/></div>
+  </AndroidFrame>;
+}
+
+const PHONES=[
+  {k:'A',t:'Tổng quan',p:{initial:'fleet'}},
+  {k:'B',t:'Quét & thêm',p:{initial:'scan',world:{conn:{r09:'disconnected',hs:'disconnected'},preselect:true}}},
+  {k:'C',t:'Chi tiết thiết bị',p:{initial:'fleet',detail:'r09',auto:a=>a.start('r09','hr')}},
+  {k:'D',t:'Giám sát song song',p:{initial:'lab',auto:a=>{a.start('r09','hr');a.start('hs','hr');}}},
+];
+function App(){
+  return <div className="canvas">
+    <div className="top">
+      <h1>SmartWear Lab <span>· Liquid Glass, vòng 2</span></h1>
+      <p>Font: Inter Tight + Inter thay SF Pro · Số liệu thật từ R09 / HS500A, ô “chưa đo” là chưa có số · Ảnh thiết bị: placeholder</p>
+    </div>
+    <div className="row">
+      {PHONES.map(ph=><div key={ph.k}><div className="lbl"><b>{ph.k}</b>{ph.t}</div><AppPhone {...ph.p}/></div>)}
+    </div>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

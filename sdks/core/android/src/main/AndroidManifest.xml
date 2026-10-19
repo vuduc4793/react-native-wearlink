@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Android 12+ (API 31+) -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- Android 11 trở xuống -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="true" />
+
+    <!--
+        Gói com.smartwear.core.phone (PhoneLink): giữ kết nối khi chạy nền + nghe trạng thái cuộc gọi.
+        Quyền nhạy cảm theo chính sách (SEND_SMS, READ_CALL_LOG, ANSWER_PHONE_CALLS, READ_CONTACTS) app chủ tự khai báo
+        và xin lúc chạy; thiếu quyền thì tính năng tương ứng bỏ qua.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    <application>
+        <service
+            android:name="com.smartwear.core.phone.KeepConnectedService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
+        <!-- Đọc thông báo để đẩy lên thiết bị + đọc phiên phát nhạc (người dùng bật trong Cài đặt → Truy cập thông báo).
+             App không dùng PhoneLink có thể bỏ bằng tools:node="remove". -->
+        <service
+            android:name="com.smartwear.core.phone.PhoneNotificationListener"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

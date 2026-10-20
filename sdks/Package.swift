@@ -17,7 +17,11 @@ let package = Package(
         .library(name: "SmartWearVeepoo", targets: ["SmartWearVeepoo"]),
     ],
     targets: [
-        .target(name: "SmartWearCore", path: "core/ios/Sources/SmartWearCore"),
+        .target(
+            name: "SmartWearCore", path: "core/ios/Sources/SmartWearCore",
+            // DeviceManager / WearableDevice là @Observable cho SwiftUI (iOS 17). CocoaPods (React Native, iOS 15.1) không bật cờ này.
+            swiftSettings: [.define("SMARTWEAR_OBSERVATION")]
+        ),
         .target(name: "SmartWearQRing", dependencies: ["SmartWearCore"], path: "qring/ios/Sources/SmartWearQRing"),
         .target(name: "SmartWearStandard", dependencies: ["SmartWearCore"], path: "standard/ios/Sources/SmartWearStandard"),
         .target(name: "SmartWearGloryFit", dependencies: ["SmartWearCore"], path: "gloryfit/ios/Sources/SmartWearGloryFit"),

@@ -1,12 +1,16 @@
 import CoreBluetooth
 import Foundation
+#if SMARTWEAR_OBSERVATION
 import Observation
+#endif
 
-/// Một thiết bị đang được quản lý (bản iOS của `WearableDevice` Android). Mọi thuộc tính quan sát được
+/// Một thiết bị đang được quản lý (bản iOS của `WearableDevice` Android). Có cờ `SMARTWEAR_OBSERVATION` (Package.swift) thì mọi thuộc tính quan sát được
 /// bằng Observation, nên SwiftUI tự cập nhật. Driver kế thừa và override `connect`, `disconnect`,
 /// `measure`, `refreshBattery`; các thuộc tính trạng thái do driver gán.
 @MainActor
+#if SMARTWEAR_OBSERVATION
 @Observable
+#endif
 open class WearableDevice: Identifiable {
     public let id: UUID
     public let driverId: String
@@ -55,7 +59,7 @@ open class WearableDevice: Identifiable {
     /// Cài đặt & điều khiển do driver `ConfigurableDevice` dựng theo bảng tính năng. Rỗng = thiết bị không có.
     public var controls: [DeviceControl] = []
     /// Thiết bị yêu cầu tìm điện thoại (true = đổ chuông, false = dừng). App gán.
-    @ObservationIgnored public var onFindPhone: ((Bool) -> Void)?
+    public var onFindPhone: ((Bool) -> Void)?
     /// Báo thiết bị là điện thoại đang / đã thôi đổ chuông, để thiết bị tắt màn "đang tìm điện thoại" khi người dùng
     /// bấm "Đã tìm thấy" trên điện thoại. Mặc định không làm gì.
     open func setPhoneRinging(_ ringing: Bool) async {}
@@ -63,7 +67,7 @@ open class WearableDevice: Identifiable {
     /// Thiết bị có nút chụp ảnh từ xa (điều khiển camera điện thoại).
     open var supportsRemoteCamera: Bool { false }
     /// Sự kiện chụp ảnh từ xa từ thiết bị. App gán.
-    @ObservationIgnored public var onRemoteCamera: ((RemoteCameraEvent) -> Void)?
+    public var onRemoteCamera: ((RemoteCameraEvent) -> Void)?
     /// Báo thiết bị app đã mở / đóng màn chụp ảnh (thiết bị hiện / ẩn nút chụp). Mặc định không làm gì.
     open func setRemoteCamera(_ open: Bool) async {}
 
@@ -94,7 +98,7 @@ open class WearableDevice: Identifiable {
     open func callEnded() async {}
     /// Người dùng bấm từ chối cuộc gọi trên thiết bị. iOS không cho app cúp cuộc gọi di động (CallKit chỉ cúp cuộc
     /// gọi của chính app): app chỉ ghi nhận / báo người dùng; với ANCS thiết bị tự từ chối qua hệ thống.
-    @ObservationIgnored public var onRejectCall: (() -> Void)?
+    public var onRejectCall: (() -> Void)?
 
     // MusicRemote.
 
@@ -105,7 +109,7 @@ open class WearableDevice: Identifiable {
     /// Lệnh nhạc người dùng bấm trên thiết bị. iOS không cho app điều khiển trình phát của app khác
     /// (Nhạc, Spotify…): app chỉ điều khiển được trình phát của chính mình. Khi thiết bị đã ghép Bluetooth cổ điển,
     /// nút nhạc có thể đi thẳng qua AVRCP tới iPhone (không qua app, chưa kiểm).
-    @ObservationIgnored public var onMusicCommand: ((MusicCommand) -> Void)?
+    public var onMusicCommand: ((MusicCommand) -> Void)?
     /// Gửi trạng thái trình phát (đang phát, tên bài…) lên thiết bị. Mặc định không làm gì.
     open func setMusicState(_ state: MusicState) async {}
     /// Gửi âm lượng điện thoại (0–100) lên thiết bị. Mặc định không làm gì.
@@ -179,9 +183,9 @@ open class WearableDevice: Identifiable {
     open func resumeWorkout() async throws { throw GattError.operationFailed("Tiếp tục bài tập", "thiết bị không hỗ trợ") }
     open func stopWorkout() async throws { throw GattError.operationFailed("Dừng bài tập", "thiết bị không hỗ trợ") }
     /// Trạng thái + số liệu realtime của bài tập. App gán.
-    @ObservationIgnored public var onWorkoutEvent: ((WorkoutEvent) -> Void)?
+    public var onWorkoutEvent: ((WorkoutEvent) -> Void)?
     /// Thiết bị xin / thôi xin vị trí điện thoại. App gán, rồi gọi `sendLocation` mỗi vài giây khi `start`.
-    @ObservationIgnored public var onLocationRequest: ((LocationRequest) -> Void)?
+    public var onLocationRequest: ((LocationRequest) -> Void)?
     /// Gửi một điểm vị trí điện thoại (độ, mét, m/s). Thiết bị không dùng trường nào thì bỏ qua trường đó.
     open func sendLocation(latitude: Double, longitude: Double, altitude: Double? = nil, speed: Double? = nil, accuracy: Double? = nil) async throws {
         throw GattError.operationFailed("Gửi vị trí", "thiết bị không hỗ trợ")
@@ -203,7 +207,7 @@ open class WearableDevice: Identifiable {
     // DeviceEvents.
 
     /// Nút / sự kiện lẻ của thiết bị. App gán.
-    @ObservationIgnored public var onDeviceEvent: ((DeviceEvent) -> Void)?
+    public var onDeviceEvent: ((DeviceEvent) -> Void)?
 
     // MARK: Chẩn đoán kết nối
 
@@ -232,19 +236,19 @@ open class WearableDevice: Identifiable {
 
     public nonisolated static let timelineLimit = 200
     /// Ghi sự kiện "quảng bá" lên dòng thời gian tối đa một lần mỗi chừng này giây (quét gửi nhiều gói/giây).
-    @ObservationIgnored public var sightingLogInterval: TimeInterval = 20
-    @ObservationIgnored private var lastSightingLogged: Date?
+    public var sightingLogInterval: TimeInterval = 20
+    private var lastSightingLogged: Date?
     /// `DeviceManager` nhận mọi sự kiện của thiết bị để ghi nhật ký chung.
-    @ObservationIgnored var eventListener: ((ConnectionEvent) -> Void)?
+    var eventListener: ((ConnectionEvent) -> Void)?
 
-    @ObservationIgnored public var logLimit = 300
-    @ObservationIgnored public var trailLength = 28
-    @ObservationIgnored public private(set) var connection: GattConnection?
-    @ObservationIgnored private var rate = PacketRateWindow(window: 5)
-    @ObservationIgnored private var logSeq = 0
-    @ObservationIgnored private var measureTasks: [Capability: Task<Void, Never>] = [:]
+    public var logLimit = 300
+    public var trailLength = 28
+    public private(set) var connection: GattConnection?
+    private var rate = PacketRateWindow(window: 5)
+    private var logSeq = 0
+    private var measureTasks: [Capability: Task<Void, Never>] = [:]
     /// (trạng thái cũ, trạng thái mới) mỗi lần `state` đổi. `DeviceManager` dùng để phát hiện mất kết nối.
-    @ObservationIgnored var stateListener: ((ConnectionState, ConnectionState) -> Void)?
+    var stateListener: ((ConnectionState, ConnectionState) -> Void)?
 
     /// Giới hạn pha nối link của lần `connect` tới (xem `GattConnection.linkTimeout`). nil = chờ đến khi thiết bị
     /// xuất hiện. Không có kết nối GATT gắn kèm thì bỏ qua.

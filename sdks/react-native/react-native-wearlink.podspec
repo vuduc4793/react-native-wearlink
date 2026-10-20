@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
   s.homepage     = "https://github.com/vuduc4793/react-native-wearlink"
   s.license      = { :type => "UNLICENSED" }
   s.author       = "SmartWear"
-  s.platforms    = { :ios => "17.0" }
+  s.platforms    = { :ios => "15.1" }
   s.source       = { :path => "." }
   s.source_files = "ios/**/*.{h,m,mm,swift}"
   s.swift_version = "5.10"

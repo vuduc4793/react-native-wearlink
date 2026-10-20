@@ -8,7 +8,7 @@ Không thấy lỗi của bạn ở đây thì [báo lỗi](bao-loi.md).
 | Triệu chứng | Nguyên nhân | Sửa |
 |---|---|---|
 | iOS: `No such module 'SmartWearCore'` (hoặc `SmartWearVeepoo`…) | Podfile thiếu pod SDK | Thêm đủ **5** pod trỏ tới `node_modules/react-native-wearlink/vendor/sdks` ([hướng dẫn §3](huong-dan-su-dung.md#ios)), chạy lại `pod install` |
-| iOS: `pod install` báo pod yêu cầu iOS 17 / `compiling for iOS 15.1, but module has a minimum deployment target of iOS 17` | Podfile hoặc target app dưới 17 | `platform :ios, '17.0'` **và** Deployment Target của target app = 17.0 |
+| iOS: `pod install` báo pod yêu cầu iOS 17 / `module has a minimum deployment target of iOS 17` | Đang dùng bản 0.1.0 (cần iOS 17) | Nâng lên 0.1.1 trở lên (cần iOS 15.1). `platform :ios` và Deployment Target của app ≥ 15.1 |
 | iOS: app crash ngay khi quét | Thiếu `NSBluetoothAlwaysUsageDescription` trong `Info.plist` | Thêm khoá đó. `NSBluetoothPeripheralUsageDescription` là khoá cũ, không đủ |
 | `TurboModuleRegistry.getEnforcing(...): 'SmartWear' could not be found` | App chưa bật kiến trúc mới, hoặc chưa build lại native sau khi cài | Android: `newArchEnabled=true` trong `gradle.properties`. iOS: `RCT_NEW_ARCH_ENABLED=1 pod install`. Rồi build lại app (không chỉ reload JS) |
 | Android: `minSdkVersion 24 cannot be smaller than version 26` | App để minSdk dưới 26 | `minSdkVersion = 26` (hoặc cao hơn) trong `android/build.gradle` |

@@ -23,7 +23,7 @@ Tính năng từng máy khác nhau. **Đừng hard-code theo tên máy**: đọc
 |---|---|
 | React Native | 0.76 trở lên, **bật kiến trúc mới** (`newArchEnabled=true`, `RCT_NEW_ARCH_ENABLED=1`) |
 | Android | `minSdkVersion` 26, JDK 17, Kotlin 2.x |
-| iOS | **17.0** (SDK dùng Observation). App có target thấp hơn phải nâng lên 17 |
+| iOS | **15.1** (từ bản 0.1.1; bản 0.1.0 cần 17.0) |
 
 ## 3. Cài đặt
 
@@ -51,7 +51,7 @@ Không phải khai báo module Gradle. Manifest của thư viện đã có quy�
 1. `ios/Podfile`:
 
    ```ruby
-   platform :ios, '17.0'
+   platform :ios, min_ios_version_supported   # 15.1
 
    target 'YourApp' do
      config = use_native_modules!
@@ -65,7 +65,7 @@ Không phải khai báo module Gradle. Manifest của thư viện đã có quy�
    ```
 
    Thiếu pod nào thì build báo `No such module 'SmartWear…'`. Phải đủ cả 5 pod, kể cả driver app không dùng.
-2. Đặt Deployment Target của target app thành **17.0** trong Xcode.
+2. Deployment Target của target app ≥ **15.1**.
 3. `Info.plist`:
    - `NSBluetoothAlwaysUsageDescription`: câu giải thích vì sao dùng Bluetooth. Thiếu dòng này thì app crash khi quét lần đầu.
    - `UIBackgroundModes` có `bluetooth-central`, để giữ kết nối và tự nối lại khi app ở nền.

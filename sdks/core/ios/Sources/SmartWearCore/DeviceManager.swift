@@ -1,6 +1,8 @@
 import CoreBluetooth
 import Foundation
+#if SMARTWEAR_OBSERVATION
 import Observation
+#endif
 
 /// Một thiết bị thấy khi quét, đã được phân loại theo driver.
 public struct DiscoveredDevice: Identifiable, Sendable {
@@ -22,8 +24,13 @@ public struct DiscoveredDevice: Identifiable, Sendable {
 ///   lịch riêng qua `DeviceDriver.reconnectBackoff`, vd QRing 2/4/4… s như app gốc), cho đến khi nối được
 ///   hoặc người dùng `disconnect`/`remove`. Lần tự nối lại không giới hạn pha link (CoreBluetooth chờ thiết bị
 ///   xuất hiện), nên đồng hồ quảng bá thưa hay đang bị điện thoại khác giữ sẽ được nối ngay khi rảnh.
+// `@Observable` chỉ khi có cờ `SMARTWEAR_OBSERVATION` (Package.swift, iOS 17, app lab SwiftUI). Pod cho React Native (iOS 15.1)
+// không bật cờ. Không dùng `@ObservationIgnored`: macro không đọc được thuộc tính bọc trong `#if`, và các thuộc tính không hiển thị
+// (callback, task, thông số) có bị theo dõi cũng không làm view nào vẽ lại.
 @MainActor
+#if SMARTWEAR_OBSERVATION
 @Observable
+#endif
 public final class DeviceManager {
     /// Lùi dần giữa các lần thử nối lại (giây), giống `BACKOFF_MS` Android.
     public nonisolated static let defaultBackoff: [TimeInterval] = [2, 5, 10, 30, 60]
@@ -54,21 +61,21 @@ public final class DeviceManager {
     public let registry: DeviceRegistry
     public var maxConnections = 7
     /// Lần bấm kết nối chờ lần tự nối lại đang bắt tay xong tối đa chừng này rồi mới huỷ nó.
-    @ObservationIgnored public var settleTimeout: TimeInterval = 30
+    public var settleTimeout: TimeInterval = 30
     /// Lùi dần giữa các lần thử nối lại, cho driver không đặt `reconnectBackoff` riêng.
-    @ObservationIgnored public var backoff = DeviceManager.defaultBackoff
+    public var backoff = DeviceManager.defaultBackoff
     /// Chờ trước khi nối lại sau khi mất kết nối ngoài ý muốn (Android: 2 s).
-    @ObservationIgnored public var reconnectDelay: TimeInterval = 2
+    public var reconnectDelay: TimeInterval = 2
     /// Giới hạn pha link cho lần kết nối người dùng bấm.
-    @ObservationIgnored public var interactiveLinkTimeout: TimeInterval = 40
+    public var interactiveLinkTimeout: TimeInterval = 40
     /// Giới hạn pha link cho lần tự nối lại. nil = chờ đến khi thiết bị xuất hiện (yêu cầu kết nối chờ của CoreBluetooth).
-    @ObservationIgnored public var backgroundLinkTimeout: TimeInterval?
+    public var backgroundLinkTimeout: TimeInterval?
     /// Chờ nối lại quá lâu chừng này thì đặt `linkStatus` chẩn đoán.
-    @ObservationIgnored public var diagnoseAfter: TimeInterval = 20
+    public var diagnoseAfter: TimeInterval = 20
     /// Treo ở pha link/khám phá quá chừng này (có quảng bá) thì nghi đang chờ ghép đôi.
-    @ObservationIgnored public var pairingStuckAfter: TimeInterval = ConnectionDiagnostics.pairingStuckAfter
+    public var pairingStuckAfter: TimeInterval = ConnectionDiagnostics.pairingStuckAfter
     /// Gọi mỗi lần kết nối thất bại (bấm tay hoặc tự nối lại), kèm giải thích. Vd AutoTest in ra console.
-    @ObservationIgnored public var onConnectFailed: ((WearableDevice, ConnectionFailure, Diagnosis) -> Void)?
+    public var onConnectFailed: ((WearableDevice, ConnectionFailure, Diagnosis) -> Void)?
     /// Nhật ký chung: sự kiện của mọi thiết bị + sự kiện Bluetooth, tối đa `globalLogLimit` dòng.
     public private(set) var events = RingBuffer<ConnectionEvent>(capacity: DeviceManager.globalLogLimit)
     public nonisolated static let globalLogLimit = 500
@@ -85,29 +92,29 @@ public final class DeviceManager {
     public private(set) var knownDevices: [KnownDevice] = []
     /// Gọi sau MỖI lần một thiết bị kết nối + bắt tay thành công, kể cả tự nối lại
     /// (vd app tự cài mặt đồng hồ mặc định).
-    @ObservationIgnored public var onConnected: ((WearableDevice) -> Void)?
+    public var onConnected: ((WearableDevice) -> Void)?
 
-    @ObservationIgnored private let central: any BleCentralProviding
-    @ObservationIgnored private let store: KnownDeviceStore
+    private let central: any BleCentralProviding
+    private let store: KnownDeviceStore
     /// Lịch sử đồng bộ gần nhất của từng thiết bị (nil = không lưu, vd kiểm thử).
-    @ObservationIgnored public let historyStore: HistoryStore?
+    public let historyStore: HistoryStore?
     /// Thiết bị có lượt đồng bộ đã hẹn (Task chưa chạy tới `syncHistory`), chặn bấm hai lần.
-    @ObservationIgnored private var syncing: Set<UUID> = []
-    @ObservationIgnored private var ignored: Set<UUID> = []
-    @ObservationIgnored private var ticker: Task<Void, Never>?
-    @ObservationIgnored private var scanStopper: Task<Void, Never>?
-    @ObservationIgnored private var restored = false
+    private var syncing: Set<UUID> = []
+    private var ignored: Set<UUID> = []
+    private var ticker: Task<Void, Never>?
+    private var scanStopper: Task<Void, Never>?
+    private var restored = false
     /// Vòng giữ kết nối đang chạy theo thiết bị (token để task cũ không xoá task mới).
-    @ObservationIgnored private var loops: [UUID: (token: UUID, task: Task<Void, Never>)] = [:]
+    private var loops: [UUID: (token: UUID, task: Task<Void, Never>)] = [:]
     /// Lúc bắt đầu chờ nối lại, cho chẩn đoán.
-    @ObservationIgnored private var waitingSince: [UUID: Date] = [:]
+    private var waitingSince: [UUID: Date] = [:]
     /// Thiết bị iOS không còn nhớ (`peripheralNotFound`), cần quét lại.
-    @ObservationIgnored private var unknownToSystem: Set<UUID> = []
+    private var unknownToSystem: Set<UUID> = []
     /// Mọi thiết bị đã quét thấy trong phiên, kể cả đã bị ẩn khỏi `discovered` vì lâu không quảng bá.
     /// Thiết bị quảng bá thưa (Y25, vòng DS500) vẫn kết nối được dù lần cuối thấy đã hơn 20 s.
-    @ObservationIgnored private var seen: [UUID: DiscoveredDevice] = [:]
+    private var seen: [UUID: DiscoveredDevice] = [:]
     /// Thiết bị iOS đang giữ kết nối (`retrieveConnectedPeripherals`), cập nhật mỗi giây khi có thiết bị chưa nối.
-    @ObservationIgnored private var systemHeld: Set<UUID> = []
+    private var systemHeld: Set<UUID> = []
 
     public init(
         registry: DeviceRegistry, central: (any BleCentralProviding)? = nil, store: KnownDeviceStore = KnownDeviceStore(),

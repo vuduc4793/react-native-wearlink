@@ -30,10 +30,10 @@ iOS khai báo pod từ đó (dưới). Cài từ repo thì dùng thẳng `sdks/`
 
 ### iOS
 
-1. `ios/Podfile`: iOS 17 (SDK dùng Observation) và 5 pod SDK:
+1. `ios/Podfile`: iOS 15.1 trở lên (mức tối thiểu của React Native) và 5 pod SDK:
 
    ```ruby
-   platform :ios, '17.0'
+   platform :ios, min_ios_version_supported   # 15.1
 
    target 'YourApp' do
      config = use_native_modules!
@@ -46,7 +46,7 @@ iOS khai báo pod từ đó (dưới). Cài từ repo thì dùng thẳng `sdks/`
      # ...
    ```
 
-2. Đặt **iOS Deployment Target = 17.0** cho target app trong Xcode.
+2. iOS Deployment Target của target app ≥ **15.1** (từ bản 0.1.1; bản 0.1.0 cần 17.0).
 3. `Info.plist`:
    - `NSBluetoothAlwaysUsageDescription`: lý do dùng Bluetooth.
    - `UIBackgroundModes` = `bluetooth-central`, để giữ kết nối và tự nối lại khi app chạy nền.

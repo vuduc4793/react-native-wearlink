@@ -18,7 +18,7 @@
     "!ios/build"
   ],
   "license": "UNLICENSED",
-  "private": true,
+  "private": false,
   "peerDependencies": {
     "react": "*",
     "react-native": ">=0.76.0"

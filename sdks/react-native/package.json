@@ -1,7 +1,7 @@
 {
-  "name": "react-native-smartwear",
+  "name": "react-native-wearlink",
   "version": "0.1.0",
-  "description": "React Native TurboModule cho SmartWear SDK: nhẫn/vòng QRing (Colmi R0x, DS500), đồng hồ GloryFit/UTE (Y25, HT43), thiết bị Bluetooth chuẩn",
+  "description": "React Native TurboModule (Android + iOS) kết nối điện thoại với thiết bị đeo: đồng hồ GloryFit/UTE (Y25), vòng tay Veepoo (GE54), nhẫn QRing, thiết bị Bluetooth chuẩn — đo, lịch sử, cài đặt, thông báo, cuộc gọi, nhạc, báo thức",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "react-native": "src/index.ts",
@@ -10,7 +10,7 @@
     "src",
     "android",
     "ios",
-    "react-native-smartwear.podspec",
+    "react-native-wearlink.podspec",
     "react-native.config.js",
     "vendor",
     "scripts/vendor.js",
@@ -40,5 +40,22 @@
     "android": {
       "javaPackageName": "com.smartwear.rn"
     }
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuduc4793/react-native-wearlink.git",
+    "directory": "sdks/react-native"
+  },
+  "homepage": "https://github.com/vuduc4793/react-native-wearlink#readme",
+  "keywords": [
+    "react-native",
+    "wearable",
+    "smartwatch",
+    "bluetooth",
+    "ble",
+    "gloryfit",
+    "veepoo",
+    "qring",
+    "health"
+  ]
 }

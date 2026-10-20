@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Cầu nối điện thoại của react-native-smartwear (cuộc gọi, tên danh bạ, trả lời SMS): app tự khai báo. -->
+    <!-- Cầu nối điện thoại của react-native-wearlink (cuộc gọi, tên danh bạ, trả lời SMS): app tự khai báo. -->
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />

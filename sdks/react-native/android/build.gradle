@@ -1,4 +1,4 @@
-// Thư viện RN `react-native-smartwear` (Android). Biên dịch thẳng mã nguồn SDK Kotlin trong repo
+// Thư viện RN `react-native-wearlink` (Android). Biên dịch thẳng mã nguồn SDK Kotlin trong repo
 // (sdks/core, qring, gloryfit, veepoo, standard), nên app dùng thư viện không phải khai báo module Gradle nào thêm.
 buildscript {
     ext.getExtOrDefault = { name, fallback -> rootProject.ext.has(name) ? rootProject.ext.get(name) : fallback }

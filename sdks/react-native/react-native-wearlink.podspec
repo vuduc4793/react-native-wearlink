@@ -2,13 +2,13 @@ require "json"
 
 package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 
-# Thư viện RN `react-native-smartwear` (iOS). SDK Swift (SmartWearCore/QRing/GloryFit/Standard/Veepoo) là các pod riêng
+# Thư viện RN `react-native-wearlink` (iOS). SDK Swift (SmartWearCore/QRing/GloryFit/Standard/Veepoo) là các pod riêng
 # trong `sdks/`, khai báo trong Podfile của app (xem README).
 Pod::Spec.new do |s|
-  s.name         = "react-native-smartwear"
+  s.name         = "react-native-wearlink"
   s.version      = package["version"]
   s.summary      = package["description"]
-  s.homepage     = "https://example.invalid/smart-wear-sdk"
+  s.homepage     = "https://github.com/vuduc4793/react-native-wearlink"
   s.license      = { :type => "UNLICENSED" }
   s.author       = "SmartWear"
   s.platforms    = { :ios => "17.0" }

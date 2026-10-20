@@ -1,4 +1,4 @@
-# react-native-smartwear
+# react-native-wearlink
 
 TurboModule (React Native kiến trúc mới, RN ≥ 0.76) bọc SmartWear SDK:
 
@@ -14,7 +14,7 @@ riêng, nên Android, iOS và thư viện RN luôn chạy cùng một mã SDK.
 ## Cài vào app React Native thuần
 
 ```sh
-npm install react-native-smartwear                                  # từ npm (gói đã kèm mã SDK trong vendor/sdks)
+npm install react-native-wearlink                                  # từ npm (gói đã kèm mã SDK trong vendor/sdks)
 # hoặc từ repo (dev):
 npm install file:<đường-dẫn>/smart-wear-sdk/sdks/react-native
 ```
@@ -31,7 +31,7 @@ iOS khai báo pod từ đó (dưới). Cài từ repo thì dùng thẳng `sdks/`
 
    target 'YourApp' do
      config = use_native_modules!
-     sdks = '../node_modules/react-native-smartwear/vendor/sdks'   # cài từ repo: '<đường-dẫn>/smart-wear-sdk/sdks'
+     sdks = '../node_modules/react-native-wearlink/vendor/sdks'   # cài từ repo: '<đường-dẫn>/smart-wear-sdk/sdks'
      pod 'SmartWearCore', :path => sdks
      pod 'SmartWearQRing', :path => sdks
      pod 'SmartWearGloryFit', :path => sdks
@@ -57,7 +57,7 @@ Không cần khai báo thêm module Gradle: thư viện biên dịch kèm mã SD
 ## Dùng
 
 ```ts
-import SmartWear, {fetchOpenMeteoForecast} from 'react-native-smartwear';
+import SmartWear, {fetchOpenMeteoForecast} from 'react-native-wearlink';
 
 SmartWear.start();                                   // gọi 1 lần: dựng lại thiết bị đã lưu, tự nối lại cái đang giữ
 const subs = [

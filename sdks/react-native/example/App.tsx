@@ -1,7 +1,7 @@
 /**
- * App mẫu cho react-native-smartwear: quét, kết nối (giữ kết nối), đo, đồng bộ lịch sử, cài đặt, thời tiết, danh bạ,
+ * App mẫu cho react-native-wearlink: quét, kết nối (giữ kết nối), đo, đồng bộ lịch sử, cài đặt, thời tiết, danh bạ,
  * tìm điện thoại, thông báo/cuộc gọi/nhạc/SMS (Android), mặt đồng hồ, bài tập, camera từ xa. Mọi thao tác đi qua API trong
- * `react-native-smartwear`. Nút "Kiểm tra API" chạy lần lượt các lệnh không phá dữ liệu và ghi `SWTEST …` ra log
+ * `react-native-wearlink`. Nút "Kiểm tra API" chạy lần lượt các lệnh không phá dữ liệu và ghi `SWTEST …` ra log
  * (Android: `adb logcat -s ReactNativeJS`).
  */
 import React, {useCallback, useEffect, useState} from 'react';
@@ -22,7 +22,7 @@ import SmartWear, {
   type DeviceControl,
   type DiscoveredDevice,
   type Reading,
-} from 'react-native-smartwear';
+} from 'react-native-wearlink';
 
 async function requestAndroidPermissions() {
   if (Platform.OS !== 'android') return;

@@ -2,10 +2,10 @@
 #import <RNSmartWearSpec/RNSmartWearSpec.h>
 #import <React/RCTBridgeModule.h>
 
-#if __has_include("react_native_smartwear/react_native_smartwear-Swift.h")
-#import "react_native_smartwear/react_native_smartwear-Swift.h"
+#if __has_include("react_native_wearlink/react_native_wearlink-Swift.h")
+#import "react_native_wearlink/react_native_wearlink-Swift.h"
 #else
-#import "react_native_smartwear-Swift.h"
+#import "react_native_wearlink-Swift.h"
 #endif
 
 @interface SmartWear : NativeSmartWearSpecBase <NativeSmartWearSpec>

@@ -18,7 +18,7 @@ end
 target 'SmartWearExample' do
   config = use_native_modules!
 
-  # SDK Swift của SmartWear (podspec trong sdks/), thư viện react-native-smartwear phụ thuộc vào chúng.
+  # SDK Swift của SmartWear (podspec trong sdks/), thư viện react-native-wearlink phụ thuộc vào chúng.
   sdks = File.expand_path('../../..', __dir__)
   pod 'SmartWearCore', :path => sdks
   pod 'SmartWearQRing', :path => sdks

@@ -4,9 +4,15 @@ TurboModule (React Native kiến trúc mới, RN ≥ 0.76) bọc SmartWear SDK:
 
 | Driver | Thiết bị đã thử | Có gì |
 |---|---|---|
+| `gloryfit` | Y25 (đồng hồ), HT43 | Đo HR, SpO2, huyết áp; lịch sử + bài tập; cài đặt; thời tiết; danh bạ; gọi điện qua đồng hồ; mặt đồng hồ; firmware |
+| `veepoo` | GE54 (vòng tay G Band) | Đo HR, SpO2, huyết áp, nhiệt độ, stress, đường huyết, acid uric + mỡ máu, thành phần cơ thể; lịch sử; báo thức; cài đặt |
 | `qring` | R09 (nhẫn), DS500 / HS500A (vòng) | Đo HR, SpO2, nhiệt độ, căng thẳng, HRV; lịch sử; cài đặt đọc lại được |
-| `gloryfit` | Y25, HT43 | Đo HR, SpO2, huyết áp; lịch sử + bài tập; cài đặt; thời tiết; danh bạ; gọi điện qua đồng hồ |
 | `standard` | Thiết bị Bluetooth chuẩn (HR, pin) | Đo nhịp tim |
+
+**Tài liệu:**
+- [Hướng dẫn sử dụng](https://github.com/vuduc4793/react-native-wearlink/blob/main/sdks/react-native/docs/huong-dan-su-dung.md)
+- [Lỗi thường gặp](https://github.com/vuduc4793/react-native-wearlink/blob/main/sdks/react-native/docs/loi-thuong-gap.md)
+- [Báo lỗi](https://github.com/vuduc4793/react-native-wearlink/blob/main/sdks/react-native/docs/bao-loi.md)
 
 Mã native gọi thẳng SDK trong repo: Kotlin `sdks/*/android`, Swift `sdks/*/ios`. Thư viện không chứa logic giao thức
 riêng, nên Android, iOS và thư viện RN luôn chạy cùng một mã SDK.
@@ -120,9 +126,5 @@ scripts/rn.sh android     # APK debug (codegen + Kotlin + SDK)
 scripts/rn.sh ios         # pod install + build Simulator
 ```
 
-Đã kiểm chứng 15/10/2026:
-- Typecheck qua.
-- Android build APK thành công.
-- iOS build Simulator thành công; app mở được, TurboModule nạp được.
-
-Chưa chạy trên thiết bị thật. Lý do: nếu chạy song song với app SmartWear Lab đang giữ kết nối, hai app sẽ giành thiết bị.
+Đã kiểm chứng 19–20/10/2026: typecheck qua; Android (Redmi Note 7 Pro) chạy `selfTest` OK trên Y25 và GE54; gói npm cài vào app
+mới build được Android và iOS Simulator. Chưa chạy trên iPhone thật.

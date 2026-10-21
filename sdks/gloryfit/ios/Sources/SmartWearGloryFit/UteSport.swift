@@ -160,12 +160,31 @@ public enum UteSport {
             while i + 2 < p.count {
                 let type = Int(p[i])
                 if type > 0 {
-                    sports.append(SportType(type: type, name: Ute.sportName(type), shown: p[i + 1] == 1, position: Int(p[i + 2])))
+                    sports.append(SportType(type: type, name: Ute.sportName(type), shown: p[i + 1] == 1, position: Int(p[i + 2]), nameEn: Ute.sportNameEn(type)))
                 }
                 i += 3
             }
         }
         return SportList(sports: sports, minShown: minShown, maxShown: maxShown)
+    }
+
+    /// Chuẩn hoá trước khi ghi, như GloryFit `sendSportManagementListsSection` (`WriteCommandToBLE.java:4840-4940`): gửi **mọi**
+    /// môn đồng hồ có; môn hiện đánh số 1..n theo `position` (bằng nhau thì giữ thứ tự mảng), môn ẩn = 0. Số môn hiện phải nằm
+    /// trong `limits` (nếu biết).
+    public static func normalizeSportList(_ sports: [SportType], limits: ClosedRange<Int>?) throws -> [SportType] {
+        guard Set(sports.map(\.type)).count == sports.count else { throw GloryFitError("Danh sách môn có mã trùng") }
+        guard sports.allSatisfy({ (1...255).contains($0.type) }) else { throw GloryFitError("Mã môn phải trong 1..255") }
+        let shown = sports.enumerated().filter { $0.element.shown }.sorted {
+            let a = $0.element.position > 0 ? $0.element.position : Int.max
+            let b = $1.element.position > 0 ? $1.element.position : Int.max
+            return a != b ? a < b : $0.offset < $1.offset
+        }
+        if let limits, !limits.contains(shown.count) {
+            throw GloryFitError("Số môn hiện \(shown.count) ngoài giới hạn \(limits.lowerBound)..\(limits.upperBound)")
+        }
+        var pos: [Int: Int] = [:]
+        for (n, e) in shown.enumerated() { pos[e.element.type] = n + 1 }
+        return sports.map { var s = $0; s.position = pos[s.type] ?? 0; return s }
     }
 
     /// Ghi danh sách: các gói `FD 48 seq [type hiện vị-trí]…` (mỗi gói tối đa `(packetLength − 3) / 3` môn), rồi

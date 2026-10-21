@@ -69,6 +69,8 @@ Không thấy lỗi của bạn ở đây thì [báo lỗi](bao-loi.md).
 | `syncHistory` trả về nhưng thiếu một loại dữ liệu | Một bước lỗi, xem `h.errors` | Hiện phần đã có. Đồng bộ lại sau. Lỗi lặp lại thì báo kèm `h.errors` |
 | GE54 không có dữ liệu cũ hơn 3 ngày | Vòng chỉ giữ 3 ngày | Đồng bộ ít nhất mỗi 2 ngày và lưu ở app / server |
 | Đồng bộ chậm, UI đơ | `await syncHistory` trên luồng UI chặn render | Hiện `onSyncProgress`, không chặn màn hình |
+| Không thấy "100+ chế độ tập" như app GloryFit | Đó là danh mục tên của app (GloryFitPro 245 môn). Y25 chỉ giữ 50 môn | `getSportTypes` = môn đồng hồ giữ; `getSportCatalog` = danh mục để tra tên. Chỉ bật/tắt, xếp thứ tự được bằng `setSportList` (từ 0.1.5, [hướng dẫn §9](huong-dan-su-dung.md#môn-tập-hiện-trên-đồng-hồ-y25-ht43)) |
+| `setSportList` báo lỗi "Số môn hiện … ngoài giới hạn" | Số môn `shown` ngoài `getSportListLimits` (Y25: 4..50) | Giữ trong giới hạn. Truyền đủ mọi môn của `getSportTypes`, không chỉ môn hiện |
 | Giờ dữ liệu lệch | Đổi múi giờ / giờ điện thoại sau khi đo | Thời gian là ms theo giờ điện thoại lúc đồng bộ. Đừng cộng múi giờ thêm |
 
 ## F. Tính năng điện thoại

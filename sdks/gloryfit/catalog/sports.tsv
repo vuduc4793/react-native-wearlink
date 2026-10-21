@@ -1,0 +1,249 @@
+# Danh mục môn GloryFit/UTE: mã (SportsMode.MULTIPLE_SPORTS_MODE_*) → tên tiếng Anh, tiếng Việt.
+# Tên tiếng Anh: mảng sportTypeAT325 của GloryFitPro 1.9.0.2 (chỉ số = mã). Tiếng Việt: tự dịch.
+# Sinh mã: python3 -I tools/gen_sport_catalog.py (ra UteSportCatalog.kt và UteSportCatalog.swift). Sửa ở đây, đừng sửa file sinh.
+id	en	vi
+1	Outdoor run	Chạy ngoài trời
+2	Outdoor cycle	Đạp xe ngoài trời
+3	Jump rope	Nhảy dây
+4	Pool swimming	Bơi hồ
+5	Badminton	Cầu lông
+6	Table tennis	Bóng bàn
+7	Tennis	Quần vợt
+8	Mountaineering	Leo núi
+9	Power walking	Đi bộ nhanh
+10	Basketball	Bóng rổ
+11	Football	Bóng đá
+12	Baseball	Bóng chày
+13	Volleyball	Bóng chuyền
+14	Cricket	Cricket
+15	American football	Bóng bầu dục Mỹ
+16	Hockey	Khúc côn cầu
+17	Dance	Khiêu vũ
+18	Spinning	Đạp xe tại chỗ
+19	Yoga	Yoga
+20	Sit-ups	Gập bụng
+21	Indoor run	Chạy trong nhà
+22	Gymnastics	Thể dục dụng cụ
+23	Whitewater rafting	Chèo thuyền vượt thác
+24	Jumping jacks	Bật nhảy dang tay
+25	Integrated training	Tập tổng hợp
+26	Indoor walk	Đi bộ trong nhà
+27	Indoor run	Chạy trong nhà
+28	Muscle strength training	Tập sức mạnh cơ
+29	Stair stepper	Máy leo bậc
+30	Horse ride	Cưỡi ngựa
+31	Elliptical trainer	Máy chạy elip
+32	Tai Chi	Thái cực quyền
+33	Shuttlecock	Đá cầu
+34	Boxing	Quyền anh
+35	Outdoor walk	Đi bộ ngoài trời
+36	Trail run	Chạy địa hình
+37	Skiing	Trượt tuyết
+38	Ice hockey	Khúc côn cầu trên băng
+39	Taekwondo	Taekwondo
+40	Aerobics exercise	Bài tập aerobic
+41	Rower	Máy chèo thuyền
+42	Air walker	Máy đi bộ trên không
+43	Walking	Đi bộ
+44	Athletics	Điền kinh
+45	Waist training	Tập eo
+46	Karate	Karate
+47	Cool down	Thả lỏng
+48	Cross training	Tập kết hợp
+49	Pilates	Pilates
+50	CrossFit	CrossFit
+51	Functional training	Tập chức năng
+52	Physical training	Rèn luyện thể lực
+53	Archery	Bắn cung
+54	Flexibility	Độ dẻo
+55	Mixed cardio	Cardio hỗn hợp
+56	Latin dance	Nhảy Latin
+57	Street dance	Nhảy đường phố
+58	Kickboxing	Kickboxing
+59	Ballet	Ba lê
+60	Australian football	Bóng bầu dục Úc
+61	Martial arts	Võ thuật
+62	Stair climb	Leo cầu thang
+63	Handball	Bóng ném
+64	Bowling	Bowling
+65	Squash	Bóng quần
+66	Curling	Bi đá trên băng
+67	Hunting	Săn bắn
+68	Single-board snowboarding	Trượt ván tuyết
+69	Leisure sports	Thể thao giải trí
+70	American football	Bóng bầu dục Mỹ
+71	Hand cycling	Xe đạp tay
+72	Fishing	Câu cá
+73	Frisbee	Ném đĩa
+74	Rugby	Bóng bầu dục
+75	Golf	Golf
+76	Folk dance	Múa dân gian
+77	Downhill skiing	Trượt tuyết đổ dốc
+78	Snow sports	Thể thao trên tuyết
+79	Meditation exercises	Bài tập thiền
+80	Core training	Tập cơ lõi
+81	Ice skate	Trượt băng
+82	Fitness games	Trò chơi thể dục
+83	Aerobics	Thể dục nhịp điệu
+84	Mass games	Đồng diễn thể dục
+85	Kendo	Kiếm đạo
+86	Lacrosse	Bóng vợt
+87	Foam roller	Con lăn giãn cơ
+88	Wrestling	Đấu vật
+89	Fencing	Đấu kiếm
+90	Softball	Bóng mềm
+91	Horizontal bar	Xà đơn
+92	Parallel bars	Xà kép
+93	Roller skating	Trượt patin
+94	Hula hoop	Lắc vòng
+95	Darts	Phi tiêu
+96	Pickleball	Pickleball
+97	HIIT	HIIT
+98	Shooting	Bắn súng
+99	Judo	Judo
+100	Trampoline	Bạt nhún
+101	Skateboard	Trượt ván
+102	Hoverboard	Xe điện cân bằng
+103	Blading	Trượt patin một hàng
+104	Parkour	Parkour
+105	Diving	Lặn
+106	Surf	Lướt sóng
+107	Snorkeling	Lặn với ống thở
+108	Pull-ups	Hít xà
+109	Push-ups	Chống đẩy
+110	Planking	Plank
+111	Climb	Leo vách
+112	Height jump	Nhảy cao
+113	Bungee jumping	Nhảy bungee
+114	Long jump	Nhảy xa
+115	Marathon	Marathon
+116	Flexibility training	Tập độ dẻo
+117	Sideboarding	Plank nghiêng
+118	Beach football	Bóng đá bãi biển
+119	Beach volleyball	Bóng chuyền bãi biển
+120	Belly dance	Múa bụng
+121	Biathlon	Hai môn phối hợp
+122	Billiards	Bi-a
+123	BMX	Xe đạp BMX
+124	Cross-country skiing	Trượt tuyết băng đồng
+125	Tug of war	Kéo co
+126	Dodgeball	Bóng né
+127	Canoeing	Đua thuyền rồng
+128	Drifting	Thả trôi
+129	Endurance run	Chạy bền
+130	Fat-burning run	Chạy đốt mỡ
+131	Fly kite	Thả diều
+132	Croquet	Bóng cửa
+133	Golf practice mode	Tập golf
+134	Spinning	Đạp xe trong nhà
+135	Jazz dance	Nhảy jazz
+136	Sepak takraw	Cầu mây
+137	Kayaking	Chèo thuyền kayak
+138	Kickboxing	Kickboxing
+139	Motorboat	Xuồng máy
+140	Steeplechase	Chạy vượt chướng ngại vật
+141	Open-water swimming	Bơi ngoài trời
+142	Orienteering	Chạy định hướng
+143	SUP	Chèo ván đứng (SUP)
+144	Parachute	Nhảy dù
+145	Rowing	Đua thuyền
+146	Motor racing	Đua xe
+147	Sail	Thuyền buồm
+148	Snowmobiling	Xe trượt tuyết máy
+149	Square dancing	Nhảy quảng trường
+150	Swing	Đu dây
+151	Triathlons	Ba môn phối hợp
+152	Fitness	Thể hình
+153	Kettlebell training	Tập tạ ấm
+154	Mixed martial arts	Võ tổng hợp
+155	Weightlifting	Cử tạ
+156	Athletics	Điền kinh
+157	Ballroom dance	Khiêu vũ thể thao
+158	Tap dance	Nhảy thiết hài
+159	Equestrian sports	Thể thao cưỡi ngựa
+160	Water polo	Bóng nước
+161	Polo	Polo
+162	Lacrosse	Bóng vợt
+163	Skateboarding	Xe trượt scooter
+164	Paragliding	Dù lượn
+165	Battle game	Trò chơi đối kháng
+166	Treadmill	Máy chạy bộ
+167	Normal exercise	Tập luyện chung
+168	Cat pose	Tư thế con mèo
+169	Cow pose	Tư thế con bò
+170	Cobra pose	Tư thế rắn hổ mang
+171	Hero 1 pose	Tư thế chiến binh 1
+172	Hero 2 pose	Tư thế chiến binh 2
+173	Hero 3 pose	Tư thế chiến binh 3
+174	Yoga roller	Con lăn yoga
+175	Mixed fitness	Thể hình hỗn hợp
+176	Boxing aerobics	Aerobic đấm bốc
+177	Cycle training	Tập vòng
+178	Aerobics exercise	Bài tập aerobic
+179	Hiking	Đi bộ đường dài
+180	P90X	P90X
+181	Stair-climber	Máy leo cầu thang
+182	Barre	Barre
+183	Hand cycling	Xe đạp tay
+184	Mind body	Thân tâm
+185	Calisthenics	Thể dục tự do
+186	Mixed cardio	Cardio hỗn hợp
+187	Traditional strength training	Tập sức mạnh truyền thống
+188	Step training	Tập bục
+189	General dance	Khiêu vũ chung
+190	Zumba	Zumba
+191	Leisure sports	Thể thao giải trí
+192	Team sports	Thể thao đồng đội
+193	Fitness gaming	Trò chơi thể dục
+194	Ball sports	Thể thao bóng
+195	Golf	Golf
+196	Racquetball	Bóng vợt tường
+197	Rugby	Bóng bầu dục
+198	Water sports	Thể thao dưới nước
+199	Kayaking	Chèo thuyền kayak
+200	Motorboat	Mô tô nước
+201	Scuba diving	Lặn bình dưỡng khí
+202	Kitesurfing	Lướt ván diều
+203	Wakeboarding	Lướt ván kéo
+204	Windsurfing	Lướt ván buồm
+205	Water fitness	Thể dục dưới nước
+206	Water sports	Thể thao dưới nước
+207	Swim Freestyle	Bơi tự do
+208	Swim-breaststroke	Bơi ếch
+209	Swim-backstroke	Bơi ngửa
+210	Swim-butterfly	Bơi bướm
+211	Ice sports	Thể thao trên băng
+212	Sledge	Xe trượt tuyết
+213	Snowshoeing	Đi bộ trên tuyết
+214	Extreme sports	Thể thao mạo hiểm
+215	Elevator	Đi thang máy
+216	Escalator	Đi thang cuốn
+217	Gardening	Làm vườn
+218	House work	Làm việc nhà
+219	In vehicle	Trên xe
+220	Meditation	Thiền
+221	Still	Đứng yên
+222	Tilting	Nghiêng người
+223	Wheelchair	Xe lăn
+224	Floor Exercise	Thể dục trên sàn
+225	Indoor Fitness	Thể hình trong nhà
+226	Flexibility Training	Tập độ dẻo
+227	Stepping Exercise	Bài tập bước
+228	Dumbbell	Tạ đơn
+229	Barbell Training	Tập tạ đòn
+230	Deadlift	Deadlift
+231	Burpee	Burpee
+232	Upper Body Training	Tập thân trên
+233	Lower Body Training	Tập thân dưới
+234	Back Training	Tập lưng
+235	All-Terrain Vehicle	Xe địa hình (ATV)
+236	Wall Ball	Ném bóng tường
+237	Outdoor Football	Bóng đá ngoài trời
+238	Snowmobile	Xe trượt tuyết máy
+239	Snowboard	Trượt ván tuyết
+240	Kabaddi	Kabaddi
+241	Kickboxing	Kickboxing
+242	Muay Thai	Muay Thái
+243	Track Run	Chạy vòng sân
+244	Road Cycling	Đạp xe đường trường
+245	Mountain Biking	Đạp xe địa hình

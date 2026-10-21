@@ -25,6 +25,7 @@ import com.smartwear.core.NotificationDisplay
 import com.smartwear.core.SmsQuickReply
 import com.smartwear.core.SmsReplyConfig
 import com.smartwear.core.SmsReplyRequest
+import com.smartwear.core.SportName
 import com.smartwear.core.SportType
 import com.smartwear.core.WatchFaceInfo
 import com.smartwear.core.WatchFaceSlot
@@ -1315,8 +1316,11 @@ class GloryFitDevice(
     override val supportsPhoneLocation: Boolean get() = UteWorkout.sportGps(features)
 
     /** Số môn hiện tối thiểu..tối đa đọc kèm [sportTypes] (gói cuối `FD 48 AA FD`); null = chưa đọc. */
-    @Volatile var sportListLimits: IntRange? = null
+    @Volatile override var sportListLimits: IntRange? = null
         private set
+
+    override val sportCatalog: List<SportName>
+        get() = UteSportCatalog.NAMES.map { (type, n) -> SportName(type, n.first, n.second) }
 
     /** Bài tập đang chạy (theo lệnh app và gói `FD 04`/xác nhận của đồng hồ): môn, thời gian tập đã tích luỹ. */
     @Volatile private var workoutType: Int? = null
@@ -1478,8 +1482,13 @@ class GloryFitDevice(
     override suspend fun setSportList(sports: List<SportType>) {
         if (state.value != ConnectionState.CONNECTED) throw GloryFitException("Đồng hồ chưa kết nối")
         if (!supportsSportList) throw GloryFitException("Đồng hồ không chọn môn được")
+        val list = try {
+            UteWorkout.normalizeSportList(sports, sportListLimits)
+        } catch (e: IllegalArgumentException) {
+            throw GloryFitException(e.message ?: "Danh sách môn không hợp lệ")
+        }
         val length = minOf(features.maxPacketLength ?: 20, gatt.mtu - 3).coerceAtLeast(20)
-        val packets = UteWorkout.sportListPackets(sports, length)
+        val packets = UteWorkout.sportListPackets(list, length)
         if (packets.isEmpty()) throw GloryFitException("Danh sách môn rỗng")
         val ok = lock.withLock {
             val channel = Channel<ByteArray>(Channel.UNLIMITED)

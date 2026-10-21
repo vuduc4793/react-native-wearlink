@@ -407,7 +407,15 @@ public final class SmartWearImpl: NSObject {
         case "setWatchFaceImage": throw InvokeError.unsupported("Dựng mặt đồng hồ từ ảnh")
 
         case "getSportTypes":
-            return try await d.sportTypes().map { ["type": $0.type, "name": $0.name, "shown": $0.shown, "position": $0.position] }
+            return try await d.sportTypes().map {
+                ["type": $0.type, "name": $0.name, "shown": $0.shown, "position": $0.position, "nameEn": $0.nameEn ?? NSNull()]
+            }
+        case "getSportListLimits":
+            if d.sportListLimits == nil { _ = try await d.sportTypes() }
+            guard let l = d.sportListLimits else { return nil }
+            return ["minShown": l.lowerBound, "maxShown": l.upperBound]
+        case "getSportCatalog":
+            return d.sportCatalog.map { ["type": $0.type, "name": $0.name, "nameEn": $0.nameEn] }
         case "setSportList":
             let list = (a["sports"] as? [NSDictionary] ?? []).map {
                 SportType(

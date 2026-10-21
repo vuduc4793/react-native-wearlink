@@ -169,7 +169,15 @@ internal class SmartWearInvoke(
 
             // ---------- Bài tập ----------
             "getSportTypes" -> need<WorkoutRemote>(d, "danh sách môn") { it.supportsSportList }.sportTypes().map {
-                mapOf("type" to it.type, "name" to it.name, "shown" to it.shown, "position" to it.position)
+                mapOf("type" to it.type, "name" to it.name, "shown" to it.shown, "position" to it.position, "nameEn" to it.nameEn)
+            }
+            "getSportListLimits" -> {
+                val w = need<WorkoutRemote>(d, "danh sách môn") { it.supportsSportList }
+                val limits = w.sportListLimits ?: run { w.sportTypes(); w.sportListLimits }
+                limits?.let { mapOf("minShown" to it.first, "maxShown" to it.last) }
+            }
+            "getSportCatalog" -> ((d as? WorkoutRemote)?.sportCatalog ?: emptyList()).map {
+                mapOf("type" to it.type, "name" to it.name, "nameEn" to it.nameEn)
             }
             "setSportList" -> {
                 val list = (a.getArray("sports")?.toArrayList() ?: arrayListOf()).map { o ->

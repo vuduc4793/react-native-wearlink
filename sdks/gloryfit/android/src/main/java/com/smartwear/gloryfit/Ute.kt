@@ -359,21 +359,11 @@ object Ute {
         return out.sortedByDescending { it.start }
     }
 
-    /** Tên môn theo mã (`SportsMode.MULTIPLE_SPORTS_MODE_*` của SDK UTE). */
-    fun sportName(type: Int): String = SPORT_NAMES[type] ?: "Môn thể thao #$type"
+    /** Tên môn tiếng Việt theo mã (`SportsMode.MULTIPLE_SPORTS_MODE_*` của SDK UTE, [UteSportCatalog]). */
+    fun sportName(type: Int): String = UteSportCatalog.NAMES[type]?.first ?: "Môn thể thao #$type"
 
-    private val SPORT_NAMES = mapOf(
-        1 to "Chạy bộ", 2 to "Đạp xe", 3 to "Nhảy dây", 4 to "Bơi", 5 to "Cầu lông", 6 to "Bóng bàn", 7 to "Quần vợt",
-        8 to "Leo núi", 9 to "Đi bộ", 10 to "Bóng rổ", 11 to "Bóng đá", 12 to "Bóng chày", 13 to "Bóng chuyền",
-        14 to "Cricket", 15 to "Bóng bầu dục", 16 to "Khúc côn cầu", 17 to "Nhảy", 18 to "Đạp xe trong nhà", 19 to "Yoga",
-        20 to "Gập bụng", 21 to "Máy chạy bộ", 22 to "Thể dục dụng cụ", 23 to "Chèo thuyền", 24 to "Bật nhảy",
-        25 to "Tập tự do", 26 to "Đi bộ trong nhà", 27 to "Chạy trong nhà", 28 to "Tập sức mạnh", 29 to "Tập bậc thang",
-        30 to "Cưỡi ngựa", 31 to "Máy elip", 32 to "Thái cực quyền", 33 to "Đá cầu", 34 to "Quyền anh",
-        35 to "Đi bộ ngoài trời", 36 to "Chạy địa hình", 37 to "Trượt tuyết", 39 to "Taekwondo", 41 to "Máy chèo",
-        43 to "Đi bộ đường dài", 46 to "Karate", 49 to "Pilates", 75 to "Golf", 81 to "Trượt băng", 96 to "Pickleball",
-        97 to "HIIT", 108 to "Hít xà", 109 to "Chống đẩy", 110 to "Plank", 115 to "Marathon", 134 to "Đạp xe trong nhà",
-        151 to "Ba môn phối hợp", 155 to "Cử tạ", 166 to "Chạy trong nhà", 167 to "Tập luyện chung",
-    )
+    /** Tên môn tiếng Anh (theo GloryFitPro); null nếu mã không có trong danh mục. */
+    fun sportNameEn(type: Int): String? = UteSportCatalog.NAMES[type]?.second
 
     /** Gói kết thúc một luồng lịch sử: `[op] FD …` (SpO2: `34 FA FD crc`). */
     fun isEnd(op: Int, p: ByteArray): Boolean = when {

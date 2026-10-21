@@ -8,6 +8,7 @@ import com.smartwear.core.WorkoutState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -95,7 +96,14 @@ class UteWorkoutTest {
                 hex("FD 48 AA FD 00 00 04 00 0A"),
             ),
         )!!
-        assertEquals(listOf(SportType(1, "Chạy bộ", true, 0), SportType(2, "Đạp xe", false, 1), SportType(9, "Đi bộ", true, 1)), list.sports)
+        assertEquals(
+            listOf(
+                SportType(1, "Chạy ngoài trời", true, 0, "Outdoor run"),
+                SportType(2, "Đạp xe ngoài trời", false, 1, "Outdoor cycle"),
+                SportType(9, "Đi bộ nhanh", true, 1, "Power walking"),
+            ),
+            list.sports,
+        )
         assertEquals(4, list.minShown)
         assertEquals(10, list.maxShown)
         assertNull(UteWorkout.parseSportList(emptyList()))
@@ -110,5 +118,58 @@ class UteWorkoutTest {
         val small = UteWorkout.sportListPackets(sports, 9)
         assertEquals(listOf("FD 48 00 01 01 00 02 01 01", "FD 48 01 09 00 00", "FD 48 FD 0A"), small.map(::hexOf))
         assertTrue(UteWorkout.sportListPackets(emptyList(), 20).isEmpty())
+    }
+
+    @Test fun sportCatalog() {
+        assertEquals(245, UteSportCatalog.NAMES.size)
+        assertEquals((1..245).toSet(), UteSportCatalog.NAMES.keys)
+        assertEquals("Cầu lông", Ute.sportName(5))
+        assertEquals("Badminton", Ute.sportNameEn(5))
+        assertEquals("Đạp xe địa hình", Ute.sportName(245))
+        assertEquals("Môn thể thao #246", Ute.sportName(246))
+        assertNull(Ute.sportNameEn(0))
+    }
+
+    @Test fun sportListNormalize() {
+        val sports = listOf(
+            SportType(1, "", true, 2), SportType(2, "", false, 5), SportType(9, "", true, 1), SportType(5, "", true, 0),
+        )
+        // Môn hiện xếp theo position (0 = cuối, giữ thứ tự danh sách), đánh lại 1..n; môn ẩn = 0.
+        val out = UteWorkout.normalizeSportList(sports, 1..4)
+        assertEquals(listOf(2, 0, 1, 3), out.map { it.position })
+        assertEquals(listOf(true, false, true, true), out.map { it.shown })
+        assertThrows(IllegalArgumentException::class.java) { UteWorkout.normalizeSportList(sports, 4..50) }
+        assertThrows(IllegalArgumentException::class.java) { UteWorkout.normalizeSportList(sports, 1..2) }
+        assertThrows(IllegalArgumentException::class.java) { UteWorkout.normalizeSportList(sports + SportType(1, "", false, 0), null) }
+    }
+
+    /**
+     * So với GloryFit `sendSportManagementListsSection` / `sendSportManagementListsEnd` (`WriteCommandToBLE.java:4840-4944`), dựng lại
+     * ở đây: mỗi gói `FD 48 seq` + `(maxLen − 2) / 3` môn `[mã hiện vịTrí]`, vị trí = chỉ số trong danh sách chọn + 1, môn ẩn `0 0`,
+     * cuối `FD 48 FD xor` (xor từ byte 2). Khớp khi `(maxLen − 2) / 3 == (maxLen − 3) / 3` (vd 244, 100).
+     */
+    @Test fun sportListWriteMatchesGloryFit() {
+        val supported = (1..50).toList()
+        val selected = listOf(35, 1, 9, 2)
+        fun gloryFit(maxLen: Int): List<String> {
+            val per = (maxLen - 2) / 3
+            var crc = 0
+            val out = supported.chunked(per).mapIndexed { seq, chunk ->
+                val p = mutableListOf(0xFD, 0x48, seq)
+                for (id in chunk) {
+                    val i = selected.indexOf(id)
+                    p += if (i < 0) listOf(id, 0, 0) else listOf(id, 1, i + 1)
+                }
+                for (b in p.drop(2)) crc = crc xor b
+                p.joinToString(" ") { "%02X".format(it) }
+            }
+            return out + "FD 48 FD %02X".format(crc and 0xFF)
+        }
+        val sports = supported.map { id -> SportType(id, "", id in selected, 0) }
+            .map { s -> s.copy(position = selected.indexOf(s.type) + 1) }
+        for (len in listOf(244, 100)) {
+            val ours = UteWorkout.sportListPackets(UteWorkout.normalizeSportList(sports, 4..50), len).map(::hexOf)
+            assertEquals("maxLen $len", gloryFit(len), ours)
+        }
     }
 }

@@ -196,7 +196,7 @@ class UteTest {
         )
         val w = Ute.parseWorkouts(packets, zone, endIsTimestamp = true).single()
         assertEquals(1, w.type)
-        assertEquals("Chạy bộ", w.name)
+        assertEquals("Chạy ngoài trời", w.name)
         assertEquals(java.time.LocalDateTime.of(2026, 10, 15, 8, 30).atZone(zone).toInstant().toEpochMilli(), w.start)
         assertEquals(1800, w.activeSeconds)
         assertEquals(w.start + 1_800_000, w.end)

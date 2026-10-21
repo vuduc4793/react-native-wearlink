@@ -25,7 +25,7 @@ final class UteWorkoutTests: XCTestCase {
         XCTAssertEqual(list.count, 1)
         let w = list[0]
         XCTAssertEqual(w.type, 1)
-        XCTAssertEqual(w.name, "Chạy bộ")
+        XCTAssertEqual(w.name, "Chạy ngoài trời")
         XCTAssertEqual(w.start, calendar.date(from: DateComponents(year: 2026, month: 10, day: 15, hour: 8, minute: 30)))
         XCTAssertEqual(w.activeSeconds, 1800)
         XCTAssertEqual(w.end, w.start.addingTimeInterval(1800))

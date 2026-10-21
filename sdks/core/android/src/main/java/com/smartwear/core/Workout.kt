@@ -3,8 +3,14 @@ package com.smartwear.core
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
-/** Một môn thể thao trên thiết bị: [type] = mã môn của hãng, [shown] = đang hiện trong danh sách, [position] = thứ tự hiện. */
-data class SportType(val type: Int, val name: String, val shown: Boolean, val position: Int)
+/**
+ * Một môn thể thao trên thiết bị: [type] = mã môn của hãng, [name] tiếng Việt, [nameEn] tiếng Anh (null = không có),
+ * [shown] = đang hiện trong danh sách, [position] = thứ tự hiện (1..n; môn ẩn = 0).
+ */
+data class SportType(val type: Int, val name: String, val shown: Boolean, val position: Int, val nameEn: String? = null)
+
+/** Một môn trong danh mục của hãng ([WorkoutRemote.sportCatalog]). */
+data class SportName(val type: Int, val name: String, val nameEn: String)
 
 enum class WorkoutState { STARTED, PAUSED, RESUMED, STOPPED }
 
@@ -55,6 +61,17 @@ interface WorkoutRemote {
 
     /** Danh sách môn đang có trên thiết bị. */
     suspend fun sportTypes(): List<SportType> = throw UnsupportedOperationException("Thiết bị không có danh sách môn")
+
+    /**
+     * Số môn được hiện tối thiểu / tối đa (đọc cùng [sportTypes]). null = chưa đọc [sportTypes] hoặc thiết bị không giới hạn.
+     */
+    val sportListLimits: IntRange? get() = null
+
+    /**
+     * Danh mục mọi môn hãng biết (mã → tên), để đặt tên bài tập và giải thích "100+ môn" của app hãng. Thiết bị chỉ giữ một phần
+     * ([sportTypes]); không thêm được môn ngoài danh sách đó.
+     */
+    val sportCatalog: List<SportName> get() = emptyList()
 
     /** Ghi danh sách môn hiện trên thiết bị (thứ tự theo [SportType.position]); ném lỗi nếu thiết bị không xác nhận. */
     suspend fun setSportList(sports: List<SportType>): Unit = throw UnsupportedOperationException("Thiết bị không có danh sách môn")

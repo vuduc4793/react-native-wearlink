@@ -121,7 +121,8 @@ final class UtePhoneTests: XCTestCase {
         XCTAssertEqual(list.sports.map(\.type), [1, 2, 9, 5])
         XCTAssertEqual(list.sports.map(\.shown), [true, false, true, true])
         XCTAssertEqual(list.sports.map(\.position), [1, 0, 2, 3])
-        XCTAssertEqual(list.sports[0].name, "Chạy bộ")
+        XCTAssertEqual(list.sports[0].name, "Chạy ngoài trời")
+        XCTAssertEqual(list.sports[0].nameEn, "Outdoor run")
         XCTAssertEqual(list.minShown, 4)
         XCTAssertEqual(list.maxShown, 20)
     }
@@ -138,6 +139,55 @@ final class UtePhoneTests: XCTestCase {
         ])
         XCTAssertEqual(UteSport.sportListPackets(sports, packetLength: 244).count, 2)
         XCTAssertEqual(UteSport.sportListPackets([], packetLength: 20).map(hex), ["FD 48 FD 00"])
+    }
+
+    func testSportCatalog() {
+        XCTAssertEqual(UteSportCatalog.names.count, 245)
+        XCTAssertEqual(Set(UteSportCatalog.names.keys), Set(1...245))
+        XCTAssertEqual(Ute.sportName(5), "Cầu lông")
+        XCTAssertEqual(Ute.sportNameEn(5), "Badminton")
+        XCTAssertEqual(Ute.sportName(246), "Môn thể thao #246")
+        XCTAssertNil(Ute.sportNameEn(0))
+    }
+
+    func testSportListNormalize() throws {
+        let sports = [
+            SportType(type: 1, name: "", shown: true, position: 2), SportType(type: 2, name: "", shown: false, position: 5),
+            SportType(type: 9, name: "", shown: true, position: 1), SportType(type: 5, name: "", shown: true, position: 0),
+        ]
+        let out = try UteSport.normalizeSportList(sports, limits: 1...4)
+        XCTAssertEqual(out.map(\.position), [2, 0, 1, 3])
+        XCTAssertThrowsError(try UteSport.normalizeSportList(sports, limits: 4...50))
+        XCTAssertThrowsError(try UteSport.normalizeSportList(sports, limits: 1...2))
+        XCTAssertThrowsError(try UteSport.normalizeSportList(sports + [SportType(type: 1, name: "", shown: false, position: 0)], limits: nil))
+    }
+
+    /// Như `UteWorkoutTest.sportListWriteMatchesGloryFit` (Kotlin): dựng lại GloryFit `sendSportManagementListsSection`
+    /// (`WriteCommandToBLE.java:4840-4944`) và so từng byte với maxLen 244 và 100.
+    func testSportListWriteMatchesGloryFit() throws {
+        let supported = Array(1...50)
+        let selected = [35, 1, 9, 2]
+        func gloryFit(_ maxLen: Int) -> [String] {
+            let per = (maxLen - 2) / 3
+            var crc: UInt8 = 0
+            var out: [String] = []
+            for (seq, start) in stride(from: 0, to: supported.count, by: per).enumerated() {
+                var p: [UInt8] = [0xFD, 0x48, UInt8(seq)]
+                for id in supported[start..<min(supported.count, start + per)] {
+                    if let i = selected.firstIndex(of: id) { p += [UInt8(id), 1, UInt8(i + 1)] } else { p += [UInt8(id), 0, 0] }
+                }
+                for b in p[2...] { crc ^= b }
+                out.append(hex(p))
+            }
+            return out + [hex([0xFD, 0x48, 0xFD, crc])]
+        }
+        let sports = supported.map { id in
+            SportType(type: id, name: "", shown: selected.contains(id), position: (selected.firstIndex(of: id) ?? -1) + 1)
+        }
+        for len in [244, 100] {
+            let ours = UteSport.sportListPackets(try UteSport.normalizeSportList(sports, limits: 4...50), packetLength: len).map(hex)
+            XCTAssertEqual(ours, gloryFit(len), "maxLen \(len)")
+        }
     }
 
     func testWorkoutClock() {

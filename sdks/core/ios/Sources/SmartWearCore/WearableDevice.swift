@@ -176,6 +176,10 @@ open class WearableDevice: Identifiable {
     /// Thiết bị xin vị trí điện thoại khi tập ngoài trời (`onLocationRequest` + `sendLocation`).
     open var supportsPhoneLocation: Bool { false }
     open func sportTypes() async throws -> [SportType] { throw GattError.operationFailed("Đọc danh sách môn", "thiết bị không hỗ trợ") }
+    /// Số môn được hiện ít / nhiều nhất (đọc cùng `sportTypes`). nil = chưa đọc hoặc thiết bị không giới hạn.
+    open var sportListLimits: ClosedRange<Int>? { nil }
+    /// Danh mục mọi môn hãng biết (mã → tên). Thiết bị chỉ giữ một phần (`sportTypes`), không thêm được môn ngoài danh sách đó.
+    open var sportCatalog: [SportName] { [] }
     /// Ghi danh sách môn (môn có `shown` = true hiện trên thiết bị, theo thứ tự trong mảng).
     open func setSportList(_ sports: [SportType]) async throws { throw GattError.operationFailed("Ghi danh sách môn", "thiết bị không hỗ trợ") }
     open func startWorkout(_ sportType: Int) async throws { throw GattError.operationFailed("Bắt đầu bài tập", "thiết bị không hỗ trợ") }

@@ -132,17 +132,34 @@ public struct WatchFaceSlot: Equatable, Sendable, Identifiable {
 public struct SportType: Equatable, Sendable, Identifiable {
     /// Mã môn (riêng của hãng; GloryFit: `SportsMode`).
     public var type: Int
+    /// Tên tiếng Việt.
     public var name: String
     /// Đang hiện trên thiết bị.
     public var shown: Bool
-    /// Vị trí trong danh sách hiện (thiết bị tự đánh số).
+    /// Vị trí trong danh sách hiện (1..n; môn ẩn = 0).
     public var position: Int
+    /// Tên tiếng Anh (nil = không có).
+    public var nameEn: String?
     public var id: Int { type }
-    public init(type: Int, name: String, shown: Bool, position: Int) {
+    public init(type: Int, name: String, shown: Bool, position: Int, nameEn: String? = nil) {
         self.type = type
         self.name = name
         self.shown = shown
         self.position = position
+        self.nameEn = nameEn
+    }
+}
+
+/// Một môn trong danh mục của hãng (`WearableDevice.sportCatalog`).
+public struct SportName: Equatable, Sendable, Identifiable {
+    public var type: Int
+    public var name: String
+    public var nameEn: String
+    public var id: Int { type }
+    public init(type: Int, name: String, nameEn: String) {
+        self.type = type
+        self.name = name
+        self.nameEn = nameEn
     }
 }
 

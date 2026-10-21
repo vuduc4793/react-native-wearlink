@@ -5,6 +5,10 @@
     <!-- Thời tiết: vị trí gần đúng + Open-Meteo. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Quét BLE trên Android 11 trở xuống (thư viện không khai báo). -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
     <!-- Quyền nhạy cảm theo chính sách: thư viện core không khai báo, app chủ tự khai báo. -->
     <!-- Danh bạ gửi lên đồng hồ (chỉ các liên hệ người dùng chọn). -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />

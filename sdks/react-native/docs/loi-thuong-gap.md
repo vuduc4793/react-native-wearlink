@@ -58,6 +58,7 @@ Không thấy lỗi của bạn ở đây thì [báo lỗi](bao-loi.md).
 | `startHeartRateStream` lỗi `unsupported` | Thiết bị đang kết nối nhưng không có nhịp tim liên tục (R09, thiết bị chuẩn không có 0x180D) | Kiểm `features.heartRateStream` trước |
 | `onHeartRate` có mẫu `connected: false` | Mất kết nối giữa buổi | Đánh dấu khoảng trống nhịp tim. Thư viện tự nối lại và mở lại luồng, không cần gọi lại |
 | Y25: nhịp tim khi chạy thưa (khoảng 25 s một giá trị) | Y25 chỉ đo theo lệnh từng lần | Bình thường với Y25. Cần ~1 giá trị/giây thì dùng dây đo nhịp tim chuẩn |
+| Android 12+: app mất vị trí chính xác (GPS) sau khi thêm thư viện, `dumpsys package` không có `ACCESS_FINE_LOCATION` | Bản ≤ 0.1.5 khai `ACCESS_FINE_LOCATION` kèm `maxSdkVersion="30"`, Gradle giữ giới hạn này khi gộp manifest | Nâng 0.1.6, app tự khai `ACCESS_FINE_LOCATION` không có `maxSdkVersion`. Bản cũ: thêm `tools:remove="android:maxSdkVersion"` vào dòng quyền của app |
 | Android: hai thông báo thường trực lúc chạy (dịch vụ vị trí của app + giữ kết nối của thư viện) | Mỗi bên một foreground service | Trong lúc dịch vụ của app chạy, gọi `setForegroundService(false)`; xong buổi chạy gọi lại `true` nếu cần giữ kết nối nền |
 
 ## E. Lịch sử và số liệu

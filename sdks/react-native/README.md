@@ -57,8 +57,9 @@ iOS khai báo pod từ đó (dưới). Cài từ repo thì dùng thẳng `sdks/`
 Không cần khai báo thêm module Gradle: thư viện biên dịch kèm mã SDK. Chỉ cần:
 
 - `minSdkVersion` ≥ 26.
-- Quyền Bluetooth đã có sẵn trong manifest của thư viện. App phải **xin quyền lúc chạy**: `BLUETOOTH_SCAN` +
-  `BLUETOOTH_CONNECT` từ Android 12 trở lên, `ACCESS_FINE_LOCATION` cho Android 11 trở xuống. Xem `example/App.tsx`.
+- Quyền Bluetooth đã có sẵn trong manifest của thư viện. Riêng `ACCESS_FINE_LOCATION` (quét BLE trên Android 11 trở
+  xuống) **app tự khai**, kèm `android:maxSdkVersion="30"` nếu app không dùng GPS. App phải **xin quyền lúc chạy**:
+  `BLUETOOTH_SCAN` + `BLUETOOTH_CONNECT` từ Android 12 trở lên, `ACCESS_FINE_LOCATION` cho Android 11 trở xuống. Xem `example/App.tsx`.
 - Manifest thư viện chỉ có Bluetooth + foreground service giữ kết nối; `bluetooth_le` là `required="false"`. Cầu nối điện
   thoại (`READ_PHONE_STATE`, dịch vụ đọc thông báo, SMS, cuộc gọi) app tự khai báo khi dùng, xem
   [hướng dẫn §3](docs/huong-dan-su-dung.md#android).

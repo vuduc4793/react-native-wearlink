@@ -39,11 +39,22 @@ Không phải khai báo module Gradle. Manifest của thư viện chỉ có ph�
 kết nối (`connectedDevice`), `POST_NOTIFICATIONS`. `bluetooth_le` để `required="false"`, nên Google Play không lọc máy
 không có BLE (app tự kiểm lúc chạy qua `onScanState`). App phải:
 
-1. **Xin quyền lúc chạy, trước khi gọi `SmartWear.start()`** (mục 4):
+1. **Tự khai `ACCESS_FINE_LOCATION`** trong `AndroidManifest.xml` của app. Thư viện không khai quyền này: nếu thư viện khai
+   kèm `maxSdkVersion`, Gradle giữ giới hạn đó cả khi app khai lại, và app chạy GPS sẽ mất vị trí chính xác trên Android 12+.
+
+   ```xml
+   <!-- App chỉ cần quét BLE: -->
+   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+   <!-- App có dùng GPS (chạy bộ, bản đồ): khai không giới hạn -->
+   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+   ```
+
+   Thiếu dòng này thì trên Android 11 trở xuống không quét được thiết bị.
+2. **Xin quyền lúc chạy, trước khi gọi `SmartWear.start()`** (mục 4):
    - Android 12 trở lên: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`.
    - Android 11 trở xuống: `ACCESS_FINE_LOCATION`.
    - Android 13 trở lên: `POST_NOTIFICATIONS` (thông báo thường trực của dịch vụ giữ kết nối).
-2. Chỉ khi dùng cầu nối điện thoại (mục 10), **tự khai báo trong `AndroidManifest.xml` của app** phần mình dùng, rồi xin
+3. Chỉ khi dùng cầu nối điện thoại (mục 10), **tự khai báo trong `AndroidManifest.xml` của app** phần mình dùng, rồi xin
    quyền lúc chạy. Thư viện không khai báo sẵn để app không dùng thì không bị Google Play hỏi:
 
    ```xml
@@ -70,9 +81,9 @@ không có BLE (app tự kiểm lúc chạy qua `onScanState`). App phải:
 
    Thiếu mục nào thì tính năng tương ứng tự bỏ qua, không crash. Không khai báo dịch vụ thì `hasNotificationAccess()`
    luôn `false` và app không hiện trong màn "Truy cập thông báo".
-3. Google Play, Android 14 trở lên: khai báo loại foreground service **connectedDevice** trong Play Console (giữ kết nối
+4. Google Play, Android 14 trở lên: khai báo loại foreground service **connectedDevice** trong Play Console (giữ kết nối
    với thiết bị đeo khi app ở nền).
-4. App tải JS qua OTA (CodePush, Expo Updates…): JS có thư viện có thể chạy trên bản build cũ chưa có native. Kiểm
+5. App tải JS qua OTA (CodePush, Expo Updates…): JS có thư viện có thể chạy trên bản build cũ chưa có native. Kiểm
    `SmartWear.isAvailable` trước khi gọi hàm nào khác (từ 0.1.2; bản cũ ném lỗi ngay lúc import).
 
 ### iOS

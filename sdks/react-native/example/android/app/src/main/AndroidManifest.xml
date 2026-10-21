@@ -1,6 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Quét BLE trên Android 11 trở xuống. App dùng GPS thì khai không có maxSdkVersion. -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
     <!-- Cầu nối điện thoại của react-native-wearlink (cuộc gọi, tên danh bạ, trả lời SMS, thông báo): app tự khai báo. -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />

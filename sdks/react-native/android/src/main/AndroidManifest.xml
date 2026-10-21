@@ -14,9 +14,10 @@
     <uses-permission
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
-    <uses-permission
-        android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="30" />
+    <!--
+        ACCESS_FINE_LOCATION (quét BLE trên Android 11 trở xuống) app tự khai báo. Thư viện khai kèm maxSdkVersion="30" thì
+        Gradle giữ giới hạn đó trên dòng quyền đã gộp, app dùng GPS sẽ mất vị trí chính xác trên Android 12+.
+    -->
 
     <!-- required="false": app có thể dùng thư viện cho tính năng phụ; Google Play không lọc máy không có BLE. -->
     <uses-feature

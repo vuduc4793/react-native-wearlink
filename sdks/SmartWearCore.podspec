@@ -1,7 +1,7 @@
 # SmartWearKit qua CocoaPods (cho thư viện React Native). Cùng mã nguồn với Package.swift.
 Pod::Spec.new do |s|
   s.name         = "SmartWearCore"
-  s.version      = "0.1.1"
+  s.version = "0.1.2"
   s.summary      = "SmartWear SDK: core"
   s.homepage     = "https://example.invalid/smart-wear-sdk"
   s.license      = { :type => "UNLICENSED" }

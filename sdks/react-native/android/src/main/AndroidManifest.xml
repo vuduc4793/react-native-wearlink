@@ -18,35 +18,24 @@
         android:name="android.permission.ACCESS_FINE_LOCATION"
         android:maxSdkVersion="30" />
 
+    <!-- required="false": app có thể dùng thư viện cho tính năng phụ; Google Play không lọc máy không có BLE. -->
     <uses-feature
         android:name="android.hardware.bluetooth_le"
-        android:required="true" />
+        android:required="false" />
 
     <!--
-        Như manifest sdks/core (thư viện biên dịch thẳng mã SDK nên không tự gộp manifest đó): giữ kết nối khi chạy nền +
-        cầu nối điện thoại (PhoneLink). Quyền nhạy cảm theo chính sách (SEND_SMS, READ_CALL_LOG, ANSWER_PHONE_CALLS,
-        READ_CONTACTS) app tự khai báo và xin lúc chạy, xem README; thiếu quyền thì tính năng tương ứng bỏ qua.
+        Chỉ gồm phần tối thiểu: Bluetooth + giữ kết nối khi chạy nền. Cầu nối điện thoại (READ_PHONE_STATE, dịch vụ
+        PhoneNotificationListener, SEND_SMS, READ_CALL_LOG…) app tự khai báo khi dùng, xem docs/huong-dan-su-dung.md.
+        Thiếu thì tính năng tương ứng bỏ qua, không crash (manifest sdks/core vẫn khai báo đủ cho app lab).
     -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
     <application>
         <service
             android:name="com.smartwear.core.phone.KeepConnectedService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
-
-        <!-- Đọc thông báo để đẩy lên thiết bị + đọc phiên phát nhạc (người dùng bật trong Cài đặt → Truy cập thông báo,
-             `SmartWear.openNotificationAccessSettings()`). App không cần có thể bỏ bằng tools:node="remove". -->
-        <service
-            android:name="com.smartwear.core.phone.PhoneNotificationListener"
-            android:exported="true"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
     </application>
 </manifest>

@@ -35,16 +35,45 @@ Gói npm đã kèm mã SDK trong `node_modules/react-native-wearlink/vendor/sdks
 
 ### Android
 
-Không phải khai báo module Gradle. Manifest của thư viện đã có quyền Bluetooth, foreground service, thông báo,
-`READ_PHONE_STATE`. App phải:
+Không phải khai báo module Gradle. Manifest của thư viện chỉ có phần tối thiểu: quyền Bluetooth, foreground service giữ
+kết nối (`connectedDevice`), `POST_NOTIFICATIONS`. `bluetooth_le` để `required="false"`, nên Google Play không lọc máy
+không có BLE (app tự kiểm lúc chạy qua `onScanState`). App phải:
 
 1. **Xin quyền lúc chạy, trước khi gọi `SmartWear.start()`** (mục 4):
    - Android 12 trở lên: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`.
    - Android 11 trở xuống: `ACCESS_FINE_LOCATION`.
    - Android 13 trở lên: `POST_NOTIFICATIONS` (thông báo thường trực của dịch vụ giữ kết nối).
-2. Chỉ khi dùng cầu nối điện thoại (chuyển cuộc gọi, tên danh bạ, trả lời SMS), **tự khai báo trong `AndroidManifest.xml`
-   của app** rồi xin lúc chạy: `READ_CALL_LOG`, `READ_CONTACTS`, `ANSWER_PHONE_CALLS`, `SEND_SMS`. Thư viện không khai báo
-   sẵn các quyền này để app không dùng thì không bị Google Play hỏi.
+2. Chỉ khi dùng cầu nối điện thoại (mục 10), **tự khai báo trong `AndroidManifest.xml` của app** phần mình dùng, rồi xin
+   quyền lúc chạy. Thư viện không khai báo sẵn để app không dùng thì không bị Google Play hỏi:
+
+   ```xml
+   <!-- Báo cuộc gọi đến (calls: true) -->
+   <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+   <uses-permission android:name="android.permission.READ_CALL_LOG" />      <!-- số gọi đến -->
+   <uses-permission android:name="android.permission.READ_CONTACTS" />      <!-- tên danh bạ -->
+   <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" /> <!-- từ chối cuộc gọi từ thiết bị -->
+   <!-- Trả lời SMS nhanh (smsReply: true) -->
+   <uses-permission android:name="android.permission.SEND_SMS" />
+
+   <application>
+     <!-- Chuyển thông báo app / SMS, điều khiển nhạc (apps, sms, music) -->
+     <service
+       android:name="com.smartwear.core.phone.PhoneNotificationListener"
+       android:exported="true"
+       android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+       <intent-filter>
+         <action android:name="android.service.notification.NotificationListenerService" />
+       </intent-filter>
+     </service>
+   </application>
+   ```
+
+   Thiếu mục nào thì tính năng tương ứng tự bỏ qua, không crash. Không khai báo dịch vụ thì `hasNotificationAccess()`
+   luôn `false` và app không hiện trong màn "Truy cập thông báo".
+3. Google Play, Android 14 trở lên: khai báo loại foreground service **connectedDevice** trong Play Console (giữ kết nối
+   với thiết bị đeo khi app ở nền).
+4. App tải JS qua OTA (CodePush, Expo Updates…): JS có thư viện có thể chạy trên bản build cũ chưa có native. Kiểm
+   `SmartWear.isAvailable` trước khi gọi hàm nào khác (từ 0.1.2; bản cũ ném lỗi ngay lúc import).
 
 ### iOS
 

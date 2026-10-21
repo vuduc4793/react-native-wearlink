@@ -56,4 +56,5 @@ export interface Spec extends TurboModule {
   readonly onEvent: EventEmitter<UnsafeObject>;
 }
 
-export default TurboModuleRegistry.getEnforcing<Spec>('SmartWear');
+/** `null` khi binary không có module native (vd. JS mới tải qua OTA lên bản build cũ). Không ném lỗi lúc import. */
+export default TurboModuleRegistry.get<Spec>('SmartWear');

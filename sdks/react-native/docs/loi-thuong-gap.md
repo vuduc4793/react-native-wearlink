@@ -13,6 +13,9 @@ Không thấy lỗi của bạn ở đây thì [báo lỗi](bao-loi.md).
 | `TurboModuleRegistry.getEnforcing(...): 'SmartWear' could not be found` | App chưa bật kiến trúc mới, hoặc chưa build lại native sau khi cài | Android: `newArchEnabled=true` trong `gradle.properties`. iOS: `RCT_NEW_ARCH_ENABLED=1 pod install`. Rồi build lại app (không chỉ reload JS) |
 | Android: `minSdkVersion 24 cannot be smaller than version 26` | App để minSdk dưới 26 | `minSdkVersion = 26` (hoặc cao hơn) trong `android/build.gradle` |
 | Android: lỗi Kotlin / JVM target | JDK hoặc Kotlin cũ | JDK 17, Kotlin 2.x (`kotlinVersion` trong `android/build.gradle` của app) |
+| Google Play: app không cài được trên máy không có BLE | Bản 0.1.0–0.1.1 khai báo `bluetooth_le` `required="true"` | Nâng 0.1.2 (`required="false"`) |
+| Google Play hỏi giải trình `READ_PHONE_STATE` / truy cập thông báo dù app không dùng | Bản 0.1.0–0.1.1 tự gộp các mục này vào manifest app | Nâng 0.1.2. Bản này chỉ gộp Bluetooth + giữ kết nối; app dùng cầu nối điện thoại thì tự khai báo ([hướng dẫn §3](huong-dan-su-dung.md#android)) |
+| Mở app crash `'SmartWear' could not be found` sau khi cập nhật JS qua OTA | JS mới có thư viện, binary cũ chưa có native | Từ 0.1.2: kiểm `SmartWear.isAvailable` trước khi gọi. Ship thư viện lần đầu bằng bản build mới, không qua OTA |
 | Sửa code trong `node_modules/react-native-wearlink` mà không thấy đổi | Android dùng `vendor/sdks`, iOS dùng pod đã cài | Đừng sửa trong `node_modules`. [Báo lỗi](bao-loi.md) để sửa ở thư viện rồi nâng phiên bản |
 
 ## B. Quyền và khởi động
@@ -22,7 +25,7 @@ Không thấy lỗi của bạn ở đây thì [báo lỗi](bao-loi.md).
 | Android: mở lại app không tự nối thiết bị cũ | `start()` gọi **trước** khi có quyền `BLUETOOTH_CONNECT` | Xin quyền trước, rồi `start()`. Người dùng cấp quyền muộn thì gọi `start()` lại |
 | Quét không ra gì, không báo lỗi | Chưa cấp quyền, Bluetooth tắt, hoặc (Android 11 trở xuống) tắt Vị trí | Nghe `onScanState`: `bluetooth: 'off' \| 'unauthorized'`, `error`. Hiện hướng dẫn cho người dùng |
 | Android 13+: không thấy thông báo "đang giữ kết nối", kết nối rớt khi app ở nền lâu | Chưa có quyền `POST_NOTIFICATIONS` hoặc tắt foreground service | Xin `POST_NOTIFICATIONS`. Không gọi `setForegroundService(false)` nếu cần giữ kết nối nền |
-| Android: bật chuyển cuộc gọi / SMS nhưng không có gì lên thiết bị | Thiếu quyền khai báo trong manifest app, hoặc chưa cấp quyền đọc thông báo | Khai báo `READ_CALL_LOG`, `READ_CONTACTS`, `ANSWER_PHONE_CALLS`, `SEND_SMS` trong manifest app rồi xin lúc chạy. `hasNotificationAccess()` false thì gọi `openNotificationAccessSettings()` |
+| Android: bật chuyển cuộc gọi / SMS nhưng không có gì lên thiết bị | Thiếu quyền khai báo trong manifest app, hoặc chưa cấp quyền đọc thông báo | Khai báo trong manifest app phần mình dùng (từ 0.1.2 gồm cả `READ_PHONE_STATE` và dịch vụ `PhoneNotificationListener`, mẫu ở [hướng dẫn §3](huong-dan-su-dung.md#android)) rồi xin lúc chạy. `hasNotificationAccess()` false thì gọi `openNotificationAccessSettings()` |
 | Sự kiện đến 2–3 lần, hoặc màn đã đóng vẫn nhận sự kiện | Đăng ký `on…` trong render, hoặc quên `remove()` | Đăng ký trong `useEffect`, trả về hàm `subs.forEach(s => s.remove())` |
 | Màn A nhận số đo của thiết bị B | Luồng sự kiện chung cho mọi thiết bị | Lọc `r.deviceId === id` |
 

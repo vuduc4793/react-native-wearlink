@@ -20,7 +20,7 @@
 
     <uses-feature
         android:name="android.hardware.bluetooth_le"
-        android:required="true" />
+        android:required="false" />
 
     <!--
         Gói com.smartwear.core.phone (PhoneLink): giữ kết nối khi chạy nền + nghe trạng thái cuộc gọi.

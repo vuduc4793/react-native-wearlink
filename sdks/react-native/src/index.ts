@@ -1,5 +1,5 @@
 import type { EventSubscription } from 'react-native';
-import Native from './NativeSmartWear';
+import NativeOrNull, { type Spec } from './NativeSmartWear';
 import type {
   Alarm, CallBluetoothState, Capability, Contact, ControlValue, Device, DeviceControl, DeviceEventName, DeviceHistory,
   DiscoveredDevice, FirmwareCheck, LocationRequest, MusicCommand, MusicState,
@@ -9,6 +9,13 @@ import type {
 } from './types';
 
 export * from './types';
+
+/** Binary thiếu module native: import vẫn được, chỉ lúc gọi mới báo lỗi. Kiểm `SmartWear.isAvailable` trước. */
+const Native: Spec = NativeOrNull ?? new Proxy({} as Spec, {
+  get: () => () => {
+    throw new Error('react-native-wearlink: module native SmartWear không có trong bản build này (SmartWear.isAvailable = false)');
+  },
+});
 
 /** Gọi cổng chung `invoke`; native luôn trả `{ value }`. */
 function call<T = void>(method: string, deviceId = '', args: object = {}): Promise<T> {
@@ -36,6 +43,8 @@ function on<T>(type: string, cb: (e: T) => void): EventSubscription {
  * ```
  */
 export const SmartWear = {
+  /** Bản build có module native. False khi JS mới chạy trên binary cũ (OTA): đừng gọi hàm nào khác. */
+  isAvailable: NativeOrNull != null,
   start: () => Native.start(),
   startScan: (seconds = 30) => Native.startScan(seconds),
   stopScan: () => Native.stopScan(),

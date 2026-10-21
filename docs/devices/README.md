@@ -3,6 +3,8 @@
 > Từ 19/10/2026. Mỗi thiết bị (máy thật người dùng có) một file `docs/devices/<model>.md` theo **mẫu §3**. Tài liệu giao
 > thức chi tiết vẫn nằm ở `sdks/<họ>/docs/`; file ở đây là **bảng tính năng đầy đủ + trạng thái** để không ghép thiếu.
 
+> **Tổng hợp một chỗ** (Y25, HT43, GE54 theo app gốc + trạng thái SDK, 21/10): [TONG_HOP_TINH_NANG.md](TONG_HOP_TINH_NANG.md).
+
 ## 1. Danh sách thiết bị
 
 | Thiết bị | Họ giao thức (driver) | App chính hãng | Tài liệu |

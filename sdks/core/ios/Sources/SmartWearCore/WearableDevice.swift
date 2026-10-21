@@ -201,6 +201,25 @@ open class WearableDevice: Identifiable {
         AsyncThrowingStream { $0.finish(throwing: GattError.operationFailed("Nhịp tim liên tục", "thiết bị không hỗ trợ")) }
     }
 
+    // AGPS (thiết bị có GPS riêng). Mặc định không hỗ trợ. SDK không gọi mạng: app tự lấy file dữ liệu vệ tinh.
+
+    /// Thiết bị nhận AGPS (`agpsInfo`, `sendAgpsPosition`, `uploadAgpsFiles`).
+    open var supportsAgps: Bool { false }
+    /// Thiết bị hỏi AGPS (driver tự trả lời khi có vị trí / file đặt sẵn, xem `AgpsRequest.handled`). App gán.
+    public var onAgpsRequest: ((AgpsRequest) -> Void)?
+    /// Tên file thiết bị cần, phiên bản, dữ liệu vệ tinh còn hợp lệ không.
+    open func agpsInfo() async throws -> AgpsInfo { throw GattError.operationFailed("Đọc AGPS", "thiết bị không hỗ trợ") }
+    /// Vị trí điện thoại (WGS-84) lúc `timestamp`. Gửi ngay nếu đang kết nối; driver giữ lại để tự gửi khi thiết bị hỏi.
+    open func sendAgpsPosition(latitude: Double, longitude: Double, timestamp: Date = Date()) async throws {
+        throw GattError.operationFailed("Gửi vị trí AGPS", "thiết bị không hỗ trợ")
+    }
+    /// Gửi các file dữ liệu vệ tinh (một lần truyền gồm mọi file). `progress` 0–1.
+    open func uploadAgpsFiles(_ files: [AgpsFile], progress: @escaping (Double) -> Void = { _ in }) async throws {
+        throw GattError.operationFailed("Gửi AGPS", "thiết bị không hỗ trợ")
+    }
+    /// Đặt sẵn file (chỉ trong bộ nhớ) để driver tự trả lời "đã có file" và tự gửi khi thiết bị xin; nil = bỏ.
+    open func setAgpsFiles(_ files: [AgpsFile]?) throws {}
+
     // Alarms (báo thức). Mặc định không hỗ trợ.
 
     /// Thiết bị đọc / ghi được báo thức (`alarms`, `setAlarm`, `deleteAlarm`).

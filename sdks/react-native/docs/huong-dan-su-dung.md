@@ -364,6 +364,32 @@ await SmartWear.syncContacts(id, [{name: 'Mẹ', phone: '0912345678'}]);        
 await SmartWear.setAlarm(id, {id: -1, hour: 6, minute: 30, repeatDays: 0b0011111, enabled: true, label: null}); // GE54
 ```
 
+### AGPS cho đồng hồ có GPS riêng (từ 0.1.4)
+
+Đồng hồ có GPS (HT43; Y25 có cờ nhưng chưa thấy tự xin) cần **AGPS** để bắt vệ tinh nhanh. Hết dữ liệu thì HT43 hỏi điện thoại mỗi 60 s.
+Kiểm `device.features.agps`.
+
+- **Thư viện không gọi mạng và không tải file dữ liệu vệ tinh.** File AGPS phải đến từ nguồn app được phép dùng (thoả thuận với hãng đồng hồ
+  hoặc nhà cung cấp dữ liệu GNSS). Dùng khoá / API của app hãng khác là quyết định và trách nhiệm của bên tích hợp.
+- Không có file, chỉ gửi **vị trí điện thoại** cũng giúp bắt vệ tinh nhanh hơn. Thư viện giữ vị trí lại và tự gửi khi đồng hồ hỏi.
+- Chưa có file, thư viện trả lời đồng hồ "không hỗ trợ" để nó thôi hỏi mỗi phút (**chưa kiểm trên máy**).
+
+```ts
+const st = await SmartWear.getAgpsStatus(id);   // { files: ['…'], version, interval, ephemerisValid }
+await SmartWear.sendAgpsPosition(id, { latitude: 21.0285, longitude: 105.8542 });  // vị trí điện thoại lúc gần nhất
+
+// Có file từ nguồn được phép: gửi ngay (tiến độ onTransferProgress, what: 'agps') …
+await SmartWear.uploadAgpsFiles(id, st.files.map(name => ({ name, base64: myFiles[name] })));
+// … hoặc đặt sẵn để thư viện tự gửi khi đồng hồ xin (chỉ trong bộ nhớ, kể cả lúc JS không chạy).
+await SmartWear.setAgpsFiles(id, st.files.map(name => ({ name, base64: myFiles[name] })));
+
+SmartWear.onAgpsRequest(e => {
+  // e.request: 'STATUS' | 'DOWNLOAD' | 'POSITION'; e.handled = thư viện đã tự trả lời bằng vị trí / file đặt sẵn.
+});
+```
+
+Giới hạn: tối đa 16 file, mỗi file ≤ 256 KB, tổng ≤ 512 KB. Tên file lấy từ `getAgpsStatus().files`.
+
 ## 11. Firmware (Android)
 
 `checkFirmware(id, path)` kiểm file trước. `updateFirmware(id, path)` nạp, tiến độ qua `onTransferProgress` (`what: 'firmware'`), có thể mất

@@ -83,6 +83,7 @@ SmartWear.startScan(20);
 await SmartWear.connect(id);            // mặc định GIỮ kết nối: mất thì tự nối lại, cả lần mở app sau
 SmartWear.measure(id, 'HEART_RATE');    // đo một lần, kết quả qua onReading; stopMeasure để dừng
 await SmartWear.startHeartRateStream(id); // nhịp tim liên tục khi chạy, qua onHeartRate (features.heartRateStream)
+await SmartWear.sendAgpsPosition(id, {latitude, longitude}); // đồng hồ có GPS (HT43) bắt vệ tinh nhanh hơn (features.agps)
 const h = await SmartWear.syncHistory(id, 7);
 
 const controls = await SmartWear.getControls(id);    // mục cài đặt theo đúng tính năng của thiết bị

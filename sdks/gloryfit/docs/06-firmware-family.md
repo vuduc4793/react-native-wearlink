@@ -39,9 +39,9 @@ Trong app có danh sách sản phẩm do server cấp (`GetYaMeiProductResult`, 
 
 | Key | Chỗ dùng | Kết quả với API firmware |
 |---|---|---|
-| `dcd05f241b65ec7b6af0bbe6f05145c2` | GloryFit `YCAPPKEY`, `GlobalVariable.YC_APPKEY`; GloryFitPro `ConstantOtaStatus.testAppkey` (kèm `testBtname = RB112TSG`) | **Có firmware** (mọi kết quả trúng) |
-| `75662fe33c4ee9d582b611eac9599ae5` | GloryFitPro `AppBaseInfo.appKey` | Không trúng lần nào (13 truy vấn) |
-| `aafe1db321715820098d9b19cbf8acd4` | GloryFitPro manifest `YCAPPKEY` (theo ghi chú trước) | Không trúng (thử RB370L73AC) |
+| `<khoá app hãng, không công bố>` | GloryFit `YCAPPKEY`, `GlobalVariable.YC_APPKEY`; GloryFitPro `ConstantOtaStatus.testAppkey` (kèm `testBtname = RB112TSG`) | **Có firmware** (mọi kết quả trúng) |
+| `<khoá app hãng, không công bố>` | GloryFitPro `AppBaseInfo.appKey` | Không trúng lần nào (13 truy vấn) |
+| `<khoá app hãng, không công bố>` | GloryFitPro manifest `YCAPPKEY` (theo ghi chú trước) | Không trúng (thử RB370L73AC) |
 | Các chuỗi 32 hex khác | `19e0d8a6…` (API đo huyết áp EL), `e9f1349d…` (ZhiChi CSKH), `1210e11e…`/`93301e30…` (open_id WeChat), `3408f41e…`, `32bdc32f…`, `31d92951…`, `9ccc8c41…` (secret), `2c92f3bc…` (ECG Jianyou) | **Không phải** app key firmware UTE, không dùng |
 
 ---

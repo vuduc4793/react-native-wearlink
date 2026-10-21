@@ -42,8 +42,8 @@ content={"appkey":"<YCAPPKEY trong AndroidManifest>","btname":"RB370L73AC","vers
 
 ## 4. HT43 (`RH370L73ACCV000788`), kiểm tra ngày 14/10/2026
 
-- App key: GloryFit `dcd05f241b65ec7b6af0bbe6f05145c2`; GloryFitPro `75662fe33c4ee9d582b611eac9599ae5` (`com/yc/gloryfitpro/bean/AppBaseInfo.java`).
-  Manifest GloryFitPro còn ghi `YCAPPKEY` = `aafe1db321715820098d9b19cbf8acd4` (SDK dùng).
+- App key: GloryFit `<khoá app hãng, không công bố>`; GloryFitPro `<khoá app hãng, không công bố>` (`com/yc/gloryfitpro/bean/AppBaseInfo.java`).
+  Manifest GloryFitPro còn ghi `YCAPPKEY` = `<khoá app hãng, không công bố>` (SDK dùng).
 - GloryFitPro gửi `content` = JSON `{appkey, btname, language, mac, versionname}` mã hoá RSA/PKCS1 (khoá công khai trong
   `com/yc/gloryfitpro/utils/RSAUtils.java`) theo từng đoạn 32 ký tự, ghép base64, gửi multipart. Ở đây `versionname` là cả chuỗi firmware
   (`RH370L73ACCV000788`), `btname` là phần trước chữ `V`. Công cụ: `tools/ute_ota_check.py`. Server nhận cả hai kiểu (đã thử lại bằng Y25: trả `V001205`).

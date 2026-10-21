@@ -83,6 +83,15 @@ Không thấy lỗi của bạn ở đây thì [báo lỗi](bao-loi.md).
 | Màn "đang tìm điện thoại" trên đồng hồ không tắt | App không báo lại | `setPhoneRinging(id, false)` |
 | Hành động xoá dữ liệu / khôi phục gốc chạy không hỏi | App bỏ qua `control.confirm` | Luôn hiện hộp thoại khi `confirm` khác null |
 
+## F2. AGPS (đồng hồ có GPS riêng)
+
+| Triệu chứng | Nguyên nhân | Sửa |
+|---|---|---|
+| Chạy ngoài trời, đồng hồ (HT43) tìm GPS rất lâu | Hết dữ liệu vệ tinh (AGPS) | Gọi `sendAgpsPosition` với vị trí điện thoại; có file AGPS hợp lệ thì `uploadAgpsFiles` / `setAgpsFiles` |
+| `uploadAgpsFiles` lỗi `bad_value` (Android) / `failed` (iOS) "Tên file AGPS không hợp lệ", "quá … KB" | Tên không phải ASCII, file rỗng hoặc quá giới hạn | Tên lấy từ `getAgpsStatus().files`; mỗi file ≤ 256 KB, tổng ≤ 512 KB |
+| `uploadAgpsFiles` lỗi "Đồng hồ báo sai CRC" / "huỷ nhận" | File không đúng định dạng đồng hồ cần, hoặc mất kết nối giữa chừng | Kiểm nguồn file đúng `version` của đồng hồ; để điện thoại gần, gửi lại |
+| Thư viện không tự tải file AGPS | Đúng thiết kế: thư viện không gọi mạng | App tự lấy file từ nguồn được phép |
+
 ## G. Firmware
 
 | Triệu chứng | Nguyên nhân | Sửa |

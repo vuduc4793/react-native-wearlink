@@ -52,7 +52,7 @@ export interface Spec extends TurboModule {
   readonly onFindPhone: EventEmitter<UnsafeObject>;
   readonly onSyncProgress: EventEmitter<UnsafeObject>;
   /** Sự kiện của `invoke`: `{ type, deviceId, ... }`, `type` ∈ musicCommand | rejectCall | smsReplyRequest | workout |
-   *  locationRequest | deviceEvent | remoteCamera | transferProgress | scanState | heartRate. */
+   *  locationRequest | deviceEvent | remoteCamera | transferProgress | scanState | heartRate | agpsRequest. */
   readonly onEvent: EventEmitter<UnsafeObject>;
 }
 

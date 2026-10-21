@@ -9,6 +9,7 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
+import com.smartwear.core.AgpsSupport
 import com.smartwear.core.AlarmClock
 import com.smartwear.core.BlePermissions
 import com.smartwear.core.Capability
@@ -374,6 +375,9 @@ class SmartWearModule(reactContext: ReactApplicationContext) : NativeSmartWearSp
             }
             scope.launch { c.locationRequests.collect { event("locationRequest", id, mapOf("start" to it.start, "sportType" to it.sportType)) } }
         }
+        (d as? AgpsSupport)?.let { c ->
+            scope.launch { c.agpsRequests.collect { event("agpsRequest", id, mapOf("request" to it.type.name, "handled" to it.handled)) } }
+        }
         val c = d as? ConfigurableDevice ?: return
         scope.launch {
             c.findPhoneRequests.collect { ringing ->
@@ -468,6 +472,7 @@ class SmartWearModule(reactContext: ReactApplicationContext) : NativeSmartWearSp
             "firmwareUpdate" to ((d as? FirmwareUpdatable)?.supportsFirmwareUpdate == true),
             "alarms" to ((d as? AlarmClock)?.supportsAlarms == true),
             "heartRateStream" to ((d as? HeartRateStreaming)?.supportsHeartRateStream == true),
+            "agps" to ((d as? AgpsSupport)?.supportsAgps == true),
             "maxAlarms" to ((d as? AlarmClock)?.takeIf { it.supportsAlarms }?.maxAlarms ?: 0),
         ),
     )

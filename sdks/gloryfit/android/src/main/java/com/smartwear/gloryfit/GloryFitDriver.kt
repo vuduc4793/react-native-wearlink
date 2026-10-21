@@ -1,6 +1,11 @@
 package com.smartwear.gloryfit
 
 import android.content.Context
+import com.smartwear.core.AgpsFile
+import com.smartwear.core.AgpsInfo
+import com.smartwear.core.AgpsRequest
+import com.smartwear.core.AgpsRequestType
+import com.smartwear.core.AgpsSupport
 import com.smartwear.core.BaseWearableDevice
 import com.smartwear.core.CallAudioLink
 import com.smartwear.core.CallAudioState
@@ -132,7 +137,7 @@ class GloryFitDevice(
     scanned: ScannedDevice,
     private val model: String,
 ) : BaseWearableDevice(scanned.address, scanned.name ?: model, GloryFitDriver), WatchFaceCustomizable, ConfigurableDevice, WeatherDisplay,
-    RemoteCameraDevice, NotificationDisplay, CallDisplay, MusicRemote, SmsQuickReply, ContactsSync, CallAudioLink, WorkoutRemote, HeartRateStreaming,
+    RemoteCameraDevice, NotificationDisplay, CallDisplay, MusicRemote, SmsQuickReply, ContactsSync, CallAudioLink, WorkoutRemote, HeartRateStreaming, AgpsSupport,
     FirmwareUpdatable, DeviceEvents {
 
     private val appContext = context.applicationContext
@@ -1758,6 +1763,196 @@ class GloryFitDevice(
         val p = request(bytes(0x26, 0x01), timeoutMs = 5_000) { it.op == 0x26 && it.size > 1 && Ute.u(it, 1) == 0x01 }
         SmartWearLog.i("[$name] 26 01 = ${p.toHex()}")
         return Ute.parseDialParams(p) ?: throw GloryFitException("Phản hồi 26 01 không hợp lệ: ${p.toHex()}")
+    }
+
+    // ---------- AGPS (UteAgps) ----------
+
+    private val _agpsRequests = MutableSharedFlow<AgpsRequest>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    override val agpsRequests: Flow<AgpsRequest> = _agpsRequests.asSharedFlow()
+
+    /** Vị trí điện thoại app đưa gần nhất (giây Unix, vĩ độ, kinh độ) và lúc gửi lên đồng hồ lần cuối. */
+    @Volatile
+    private var agpsPosition: Triple<Long, Double, Double>? = null
+    @Volatile
+    private var agpsPositionSentAt = 0L
+    /** File app đặt sẵn ([setAgpsFiles]), chỉ trong bộ nhớ. */
+    @Volatile
+    private var agpsFiles: List<AgpsFile>? = null
+    @Volatile
+    private var agpsUploading = false
+
+    override val supportsAgps: Boolean get() = UteAgps.supported(features)
+
+    init {
+        // Đồng hồ hỏi AGPS (HT43: `01 E9 AC 03 01 02` mỗi 60 s khi hết dữ liệu vệ tinh). Trả lời bằng vị trí / file app đặt sẵn.
+        scope.launch {
+            events.collect { p ->
+                val type = UteAgps.parseRequest(p) ?: return@collect
+                val handled = runCatching { answerAgps(type) }
+                    .onFailure { SmartWearLog.w("[$name] trả lời AGPS lỗi: ${it.message}") }
+                    .getOrDefault(false)
+                _agpsRequests.tryEmit(AgpsRequest(type, handled))
+            }
+        }
+    }
+
+    /** true = đã trả lời bằng dữ liệu app đặt (vị trí hoặc file). */
+    private suspend fun answerAgps(type: AgpsRequestType): Boolean {
+        if (state.value != ConnectionState.CONNECTED) return false
+        val files = agpsFiles
+        return when (type) {
+            AgpsRequestType.POSITION -> sendStoredAgpsPosition(force = true)
+            AgpsRequestType.STATUS -> {
+                // Như GloryFitPro `getEphemerisParams`: vị trí điện thoại trước, rồi trạng thái file (`responseEphemerisRequired`).
+                val sentPosition = sendStoredAgpsPosition(force = false)
+                val st = if (files != null) UteAgps.STATUS_DONE else GloryFitDebug.agpsNoFileStatus
+                if (st != null) writeBle5(UteAgps.status(st))
+                files != null || sentPosition
+            }
+            AgpsRequestType.DOWNLOAD -> {
+                if (files == null || agpsUploading) return false
+                transferAgps(UteAgps.payload(files)) {}
+                true
+            }
+        }
+    }
+
+    /** Gửi vị trí đã lưu nếu còn mới; không [force] thì tối đa mỗi [UteAgps.POSITION_RESEND_MS] (đồng hồ hỏi mỗi phút). */
+    private suspend fun sendStoredAgpsPosition(force: Boolean): Boolean {
+        val (ts, lat, lon) = agpsPosition ?: return false
+        val now = System.currentTimeMillis()
+        if (now - ts * 1000 > UteAgps.POSITION_MAX_AGE_MS) return false
+        if (!force && now - agpsPositionSentAt < UteAgps.POSITION_RESEND_MS) return false
+        writeBle5(UteAgps.position(ts, lat, lon))
+        agpsPositionSentAt = now
+        return true
+    }
+
+    private fun requireAgps() {
+        if (state.value != ConnectionState.CONNECTED) throw GloryFitException("Đồng hồ chưa kết nối")
+        if (!supportsAgps) throw UnsupportedOperationException("Đồng hồ không hỗ trợ AGPS")
+    }
+
+    /** `56 FD` (33F1, dữ liệu còn hợp lệ) + `01 E9 AA 01` (34F1, tên file / phiên bản). */
+    override suspend fun agpsInfo(): AgpsInfo {
+        requireAgps()
+        val valid = runCatching { request(UteAgps.EPHEMERIS_STATE) { UteAgps.parseEphemerisState(it) != null } }
+            .getOrNull()?.let(UteAgps::parseEphemerisState)
+        val packets = collect(UteAgps.INFO, ble5 = true, idleMs = 3_000, match = UteAgps::isInfoPacket, isEnd = UteAgps::isInfoEnd)
+        SmartWearLog.i("[$name] AGPS: 56 FD → $valid, AA 01 → ${packets.joinToString(" | ") { it.toHex() }}")
+        if (packets.none(UteAgps::isInfoEnd)) throw GloryFitException("Đồng hồ không trả thông tin AGPS (01 E9 AA 01)")
+        return UteAgps.parseInfo(packets, valid)
+    }
+
+    /** `01 E9 AB 02 0C ts lat lon`; lưu lại để tự gửi khi đồng hồ hỏi. Chưa kết nối thì chỉ lưu. */
+    override suspend fun sendAgpsPosition(latitude: Double, longitude: Double, timestampMs: Long) {
+        val ts = timestampMs / 1000
+        val packet = UteAgps.position(ts, latitude, longitude)
+        agpsPosition = Triple(ts, latitude, longitude)
+        if (state.value != ConnectionState.CONNECTED) return
+        requireAgps()
+        runCatching { request(packet, ble5 = true) { UteAgps.isPositionAck(it) } }
+            .onFailure { SmartWearLog.w("[$name] AGPS: đồng hồ không xác nhận vị trí (${it.message})") }
+        agpsPositionSentAt = System.currentTimeMillis()
+    }
+
+    override fun setAgpsFiles(files: List<AgpsFile>?) {
+        if (files != null) UteAgps.payload(files) // kiểm giới hạn ngay để app biết lỗi
+        agpsFiles = files?.toList()
+    }
+
+    /**
+     * Như luồng app gốc: báo đã có file (`AB 03 01 03`), chờ đồng hồ xin (`AC 03 01 01`, tối đa 10 s; không xin vẫn gửi), rồi
+     * truyền ([transferAgps]).
+     */
+    override suspend fun uploadAgpsFiles(files: List<AgpsFile>, progress: (Float) -> Unit) {
+        requireAgps()
+        val payload = UteAgps.payload(files)
+        val asked = runCatching {
+            request(UteAgps.status(UteAgps.STATUS_DONE), timeoutMs = 10_000, ble5 = true) { UteAgps.parseRequest(it) == AgpsRequestType.DOWNLOAD }
+        }.isSuccess
+        if (!asked) SmartWearLog.w("[$name] AGPS: đồng hồ chưa xin file sau AB 03 01 03, vẫn gửi")
+        transferAgps(payload, progress)
+    }
+
+    /**
+     * Truyền [payload] bằng các gói `01 E9 AB 04 idx…` lên 34F1 (`uterkcase.java:225-309`): qua mỗi mốc 4 KB chờ
+     * `AC 04 01 07` (tối đa 5 s), `AC 04 01 06 HH LL` = gửi lại từ gói HHLL; sau gói cuối 500 ms gửi `AB 04 FD FD xor`, chờ
+     * `AC 04 01 01`.
+     */
+    private suspend fun transferAgps(payload: ByteArray, progress: (Float) -> Unit): Unit = lock.withLock {
+        val channel = Channel<ByteArray>(Channel.UNLIMITED)
+        waiter = Waiter(UteAgps::isTransferResult, channel)
+        agpsUploading = true
+        try {
+            val packetLength = (GloryFitDebug.packetLength ?: minOf(features.maxPacketLength ?: 20, gatt.mtu - 3)).coerceAtLeast(20)
+            val chunk = packetLength - 6
+            val packets = UteAgps.packets(payload, chunk)
+            SmartWearLog.i("[$name] AGPS: gửi ${payload.size} byte, ${packets.size} gói × $chunk byte")
+            fun fail(st: Int): Nothing = throw GloryFitException(
+                when (st) {
+                    UteAgps.TRANSFER_CANCELLED -> "Đồng hồ huỷ nhận AGPS"
+                    UteAgps.TRANSFER_CRC -> "Đồng hồ báo sai CRC dữ liệu AGPS"
+                    UteAgps.TRANSFER_TOO_LARGE -> "Dữ liệu AGPS quá lớn với đồng hồ"
+                    else -> "Đồng hồ trả mã AGPS %02X".format(st)
+                },
+            )
+            // Gói kết quả giữa chừng: trả về gói cần gửi lại, null = tiếp tục; lỗi thì ném.
+            fun check(r: ByteArray): Int? = when (val st = UteAgps.transferStatus(r)) {
+                UteAgps.TRANSFER_RESEND -> UteAgps.resendFrom(r)
+                UteAgps.TRANSFER_CONTINUE, UteAgps.TRANSFER_OK -> null
+                else -> fail(st)
+            }
+            var seq = 0
+            var lastSector = 0
+            var resends = 0
+            var silentSectors = 0
+            var early = false // `AC 04 01 07` đến trước mốc khối: giữ lại
+            while (seq < packets.size) {
+                write5(packets[seq])
+                progress((seq + 1f) / packets.size)
+                var resendAt: Int? = null
+                val pushed = channel.tryReceive().getOrNull()
+                if (pushed != null) {
+                    if (UteAgps.transferStatus(pushed) == UteAgps.TRANSFER_CONTINUE) early = true
+                    resendAt = check(pushed)
+                }
+                val sector = ((seq + 1) * chunk) / UteAgps.SECTOR_BYTES
+                if (resendAt == null && seq < packets.size - 1 && sector != lastSector) {
+                    lastSector = sector
+                    val r = if (early) null else withTimeoutOrNull(5_000) { channel.receive() }
+                    silentSectors = if (r == null && !early) silentSectors + 1 else 0
+                    early = false
+                    if (silentSectors >= 3) throw GloryFitException("Đồng hồ ngừng phản hồi khi nhận AGPS ở gói $seq/${packets.size}")
+                    if (r != null) resendAt = check(r)
+                } else if (resendAt == null && packetLength <= 20) {
+                    delay(50) // như SDK iOS khi gói ≤ 20 byte
+                } else if (resendAt == null && seq > 0 && seq % 10 == 0) {
+                    delay(20)
+                }
+                val from = resendAt
+                if (from != null) {
+                    if (++resends > 20) throw GloryFitException("Đồng hồ yêu cầu gửi lại AGPS quá nhiều lần")
+                    seq = from.coerceIn(0, packets.size - 1)
+                } else {
+                    seq++
+                }
+            }
+            delay(500)
+            val end = UteAgps.endPacket(UteAgps.xor(packets))
+            onPacketSent(end)
+            write5(end)
+            val result = withTimeoutOrNull(30_000) {
+                var r: ByteArray
+                do { r = channel.receive() } while (UteAgps.transferStatus(r) == UteAgps.TRANSFER_CONTINUE)
+                r
+            } ?: throw GloryFitException("Không nhận được kết quả truyền AGPS")
+            if (UteAgps.transferStatus(result) != UteAgps.TRANSFER_OK) fail(UteAgps.transferStatus(result))
+            SmartWearLog.i("[$name] AGPS: đồng hồ nhận xong ${payload.size} byte")
+        } finally {
+            waiter = null
+            agpsUploading = false
+        }
     }
 
     // ---------- Kênh lệnh ----------

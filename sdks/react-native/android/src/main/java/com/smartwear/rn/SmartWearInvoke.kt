@@ -8,6 +8,8 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
+import com.smartwear.core.AgpsFile
+import com.smartwear.core.AgpsSupport
 import com.smartwear.core.Alarm
 import com.smartwear.core.AlarmClock
 import com.smartwear.core.CallAudioLink
@@ -190,6 +192,22 @@ internal class SmartWearInvoke(
                 altitude = optDouble(a, "altitude"), speed = optDouble(a, "speed"), accuracy = optDouble(a, "accuracy"),
             ).let { null }
 
+            // ---------- AGPS (thiết bị có GPS riêng) ----------
+            "getAgpsStatus" -> agps(d).agpsInfo().let { i ->
+                mapOf("files" to i.files, "version" to i.version, "interval" to i.interval, "ephemerisValid" to i.ephemerisValid)
+            }
+            "sendAgpsPosition" -> agps(d).sendAgpsPosition(
+                latitude = optDouble(a, "latitude") ?: throw InvokeException("bad_value", "Thiếu latitude"),
+                longitude = optDouble(a, "longitude") ?: throw InvokeException("bad_value", "Thiếu longitude"),
+                timestampMs = optLong(a, "timestamp") ?: System.currentTimeMillis(),
+            ).let { null }
+            "uploadAgpsFiles" -> {
+                val files = agpsFiles(a) ?: throw InvokeException("bad_value", "Thiếu files")
+                badValue { agps(d).uploadAgpsFiles(files) { f -> event("transferProgress", d.id, mapOf("what" to "agps", "fraction" to f.toDouble())) } }
+                null
+            }
+            "setAgpsFiles" -> badValue { agps(d).setAgpsFiles(agpsFiles(a)) }.let { null }
+
             // ---------- Báo thức ----------
             "getAlarms" -> need<AlarmClock>(d, "báo thức") { it.supportsAlarms }.alarms().map(::alarmMap)
             "setAlarm" -> need<AlarmClock>(d, "báo thức") { it.supportsAlarms }.setAlarm(
@@ -245,6 +263,27 @@ internal class SmartWearInvoke(
     )
 
     private fun workout(d: WearableDevice) = need<WorkoutRemote>(d, "điều khiển bài tập") { it.supportsWorkoutControl }
+
+    private fun agps(d: WearableDevice) = need<AgpsSupport>(d, "AGPS") { it.supportsAgps }
+
+    /** `files: [{name, base64}]`; null khi thiếu hoặc `null` (bỏ file đặt sẵn). */
+    private fun agpsFiles(a: ReadableMap): List<AgpsFile>? {
+        if (!a.hasKey("files") || a.isNull("files")) return null
+        return (a.getArray("files")?.toArrayList() ?: arrayListOf()).map { o ->
+            val m = o as? Map<*, *> ?: throw InvokeException("bad_value", "files phải là mảng {name, base64}")
+            val name = m["name"]?.toString() ?: throw InvokeException("bad_value", "Thiếu name")
+            val data = runCatching { android.util.Base64.decode(m["base64"]?.toString().orEmpty(), android.util.Base64.DEFAULT) }
+                .getOrElse { throw InvokeException("bad_value", "base64 không hợp lệ: $name") }
+            AgpsFile(name, data)
+        }
+    }
+
+    /** Lỗi kiểm dữ liệu vào (giới hạn cỡ, tên file) → mã `bad_value`. */
+    private inline fun <R> badValue(block: () -> R): R = try {
+        block()
+    } catch (e: IllegalArgumentException) {
+        throw InvokeException("bad_value", e.message ?: "Dữ liệu không hợp lệ")
+    }
 
     private inline fun <reified T> need(d: WearableDevice, what: String, supported: (T) -> Boolean): T {
         val t = d as? T

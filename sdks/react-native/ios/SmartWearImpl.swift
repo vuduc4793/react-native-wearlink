@@ -430,6 +430,28 @@ public final class SmartWearImpl: NSObject {
             try await d.sendLocation(latitude: lat, longitude: lon, altitude: dbl("altitude"), speed: dbl("speed"), accuracy: dbl("accuracy"))
             return nil
 
+        case "getAgpsStatus", "sendAgpsPosition", "uploadAgpsFiles", "setAgpsFiles":
+            guard d.supportsAgps else { throw InvokeError(code: "unsupported", message: "Thiết bị không hỗ trợ AGPS") }
+            switch method {
+            case "getAgpsStatus":
+                let i = try await d.agpsInfo()
+                return ["files": i.files, "version": Self.opt(i.version), "interval": Self.opt(i.interval), "ephemerisValid": Self.opt(i.ephemerisValid)]
+            case "sendAgpsPosition":
+                guard let lat = dbl("latitude"), let lon = dbl("longitude") else {
+                    throw InvokeError(code: "bad_value", message: "Thiếu latitude/longitude")
+                }
+                let at = dbl("timestamp").map { Date(timeIntervalSince1970: $0 / 1000) } ?? Date()
+                try await d.sendAgpsPosition(latitude: lat, longitude: lon, timestamp: at)
+                return nil
+            case "uploadAgpsFiles":
+                guard let files = try Self.agpsFiles(a["files"]) else { throw InvokeError(code: "bad_value", message: "Thiếu files") }
+                try await d.uploadAgpsFiles(files) { [weak self] f in self?.event("transferProgress", id, ["what": "agps", "fraction": f]) }
+                return nil
+            default:
+                try d.setAgpsFiles(try Self.agpsFiles(a["files"]))
+                return nil
+            }
+
         case "setRemoteCamera":
             await d.setRemoteCamera(bool("open"))
             return nil
@@ -492,6 +514,7 @@ public final class SmartWearImpl: NSObject {
                 self?.event("remoteCamera", id, ["event": name])
             }
             d.onDeviceEvent = { [weak self] e in self?.event("deviceEvent", id, ["event": e.rawValue]) }
+            d.onAgpsRequest = { [weak self] r in self?.event("agpsRequest", id, ["request": r.type.rawValue, "handled": r.handled]) }
             d.onLocationRequest = { [weak self] r in
                 self?.event("locationRequest", id, ["start": r.start, "sportType": Self.opt(r.sportType)])
             }
@@ -566,6 +589,7 @@ public final class SmartWearImpl: NSObject {
 
     private static func ms(_ d: Date) -> Double { (d.timeIntervalSince1970 * 1000).rounded() }
     private static func opt(_ v: Int?) -> Any { v ?? NSNull() }
+    private static func opt(_ v: Bool?) -> Any { v ?? NSNull() }
 
     private static func reading(_ id: UUID, _ r: Reading) -> [String: Any] {
         var m: [String: Any] = [
@@ -628,6 +652,19 @@ public final class SmartWearImpl: NSObject {
     }
 
     /// Tính năng điện thoại ↔ thiết bị (cùng khoá với Android, `DeviceFeatures` trong `types.ts`).
+    /// `files: [{name, base64}]`; nil khi thiếu hoặc `null` (bỏ file đặt sẵn).
+    private static func agpsFiles(_ v: Any?) throws -> [AgpsFile]? {
+        guard let v, !(v is NSNull) else { return nil }
+        guard let list = v as? [NSDictionary] else { throw InvokeError(code: "bad_value", message: "files phải là mảng {name, base64}") }
+        return try list.map { m in
+            guard let name = m["name"] as? String else { throw InvokeError(code: "bad_value", message: "Thiếu name") }
+            guard let data = (m["base64"] as? String).flatMap({ Data(base64Encoded: $0, options: .ignoreUnknownCharacters) }) else {
+                throw InvokeError(code: "bad_value", message: "base64 không hợp lệ: \(name)")
+            }
+            return AgpsFile(name: name, data: data)
+        }
+    }
+
     @MainActor private static func features(_ d: WearableDevice) -> [String: Any] {
         [
             "notifications": false,  // iOS: thiết bị đọc thông báo qua ANCS, app không gửi
@@ -639,6 +676,7 @@ public final class SmartWearImpl: NSObject {
             "customWatchFace": false, "workoutControl": d.supportsWorkoutControl, "sportList": d.supportsSportList,
             "phoneLocation": d.supportsPhoneLocation, "remoteCamera": d.supportsRemoteCamera, "firmwareUpdate": false,
             "alarms": d.supportsAlarms, "maxAlarms": d.maxAlarms, "heartRateStream": d.supportsHeartRateStream,
+            "agps": d.supportsAgps,
         ]
     }
 

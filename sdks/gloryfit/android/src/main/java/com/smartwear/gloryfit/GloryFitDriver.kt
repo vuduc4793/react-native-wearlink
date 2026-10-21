@@ -575,7 +575,8 @@ class GloryFitDevice(
 
     // ---------- Nhịp tim liên tục ----------
 
-    override val supportsHeartRateStream: Boolean get() = Capability.HEART_RATE in measurable.value
+    /** Đồng hồ chỉ tự đẩy HR theo chu kỳ ([Ute.Features.heartRateByPush], vd. HT43) không trả lời `E5 11`/`D6 01` ⇒ không có luồng. */
+    override val supportsHeartRateStream: Boolean get() = Capability.HEART_RATE in measurable.value && !features.heartRateByPush
 
     /**
      * Đo lặp: (`F7 02` tạm tắt HR 24h nếu đang bật) → `D6 01` → mỗi vòng `E5 11`, nhận `E5 11 00 rr` giữa chừng (Y25 đẩy khoảng

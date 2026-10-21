@@ -577,7 +577,8 @@ public final class GloryFitDevice: WearableDevice {
 
     // MARK: - Nhịp tim liên tục
 
-    override public var supportsHeartRateStream: Bool { measurableCapabilities.contains(.heartRate) }
+    /// Đồng hồ chỉ tự đẩy HR theo chu kỳ (`heartRateByPush`, vd. HT43) không trả lời `E5 11`/`D6 01` ⇒ không có luồng.
+    override public var supportsHeartRateStream: Bool { measurableCapabilities.contains(.heartRate) && !features.heartRateByPush }
 
     /// Đo lặp như Android: (`F7 02` nếu HR 24h đang bật) → `D6 01` → mỗi vòng `E5 11`, nhận `E5 11 00 rr` giữa chừng (Y25 đẩy
     /// khoảng mỗi giây khi đo trên đồng hồ; khi app ra lệnh **chưa kiểm**) tới khi đồng hồ tự kết thúc `E5 00 …` hoặc hết

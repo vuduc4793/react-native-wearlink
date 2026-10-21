@@ -270,9 +270,10 @@ sub.remove();
 | Dây đo / đồng hồ phát nhịp tim chuẩn 0x180D (Polar, Coospo, Magene, Garmin "Broadcast HR"…) | notify 0x2A37, có RR và tiếp xúc da nếu dây gửi | ~1 mẫu/giây | Chưa (đã test bộ giải mã) |
 | GE54 (`veepoo`) | lệnh đo nhịp tim `D0 01` chạy liên tục tới khi dừng | ~1 mẫu/giây (theo vòng) | Chưa |
 | Y25 (`gloryfit`) | đo lặp `E5 11` → `E5 00`, tạm tắt HR 24h trong lúc stream, bật lại khi dừng | ít nhất 1 mẫu/25 s; nếu đồng hồ đẩy giá trị giữa chừng thì ~1/giây | Chưa |
+| HT43 (`gloryfit`) | **không hỗ trợ** (`features.heartRateStream = false`): đồng hồ chỉ tự đẩy HR theo chu kỳ, bỏ qua lệnh đo `E5 11` | – | – |
 | R09 (`qring`) | | | Không hỗ trợ (`unsupported`) |
 
-Màn ghép thiết bị đo nhịp tim lúc bắt đầu chạy: lọc kết quả quét bằng `d.heartRateService || d.driver === 'gloryfit' || d.driver === 'veepoo'`.
+Màn ghép thiết bị đo nhịp tim lúc bắt đầu chạy: lọc kết quả quét bằng `d.heartRateService || d.driver === 'gloryfit' || d.driver === 'veepoo'`, sau khi kết nối thì kiểm lại `device.features.heartRateStream` (HT43 = false).
 
 **Android, khi app đã có foreground service riêng** (vd dịch vụ vị trí lúc chạy): kết nối BLE nằm trong tiến trình app, dịch vụ
 `KeepConnectedService` của thư viện chỉ giữ tiến trình sống ở nền. Nếu dịch vụ của app đang chạy thì gọi `setForegroundService(false)`

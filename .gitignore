@@ -25,3 +25,6 @@ sdks/react-native/example/ios/build/
 
 # Báo lỗi từ app tích hợp (có thể chứa log thật), không đưa lên repo công khai
 bugs/
+
+# Worktree của các phiên Claude
+.claude/worktrees/

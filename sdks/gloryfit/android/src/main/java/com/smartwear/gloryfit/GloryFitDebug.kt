@@ -17,4 +17,9 @@ object GloryFitDebug {
      * nhưng chưa kiểm hết trên Y25 nên mặc định tắt (giống bản iOS: có hàm dựng, chưa nối vào syncHistory).
      */
     @Volatile var syncSince: Boolean = false
+    /**
+     * Trạng thái trả lời khi đồng hồ hỏi AGPS (`01 E9 AC 03 01 02`) mà app chưa đặt file: 5 = không hỗ trợ (mặc định, để đồng hồ
+     * thôi hỏi mỗi 60 s; **chưa kiểm trên máy**), 1 = đang chuẩn bị (app GloryFitPro gửi khi chưa có file), null = không trả lời.
+     */
+    @Volatile var agpsNoFileStatus: Int? = UteAgps.STATUS_NOT_SUPPORT
 }

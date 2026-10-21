@@ -204,7 +204,34 @@ export interface DeviceFeatures {
   maxAlarms: number;
   /** Nhịp tim liên tục (`startHeartRateStream`). Chỉ đúng khi đã kết nối. */
   heartRateStream: boolean;
+  /** Thiết bị có GPS riêng nhận AGPS (`getAgpsStatus`, `sendAgpsPosition`, `uploadAgpsFiles`). Chỉ đúng khi đã kết nối. */
+  agps: boolean;
 }
+
+/** Thông tin AGPS thiết bị báo (`getAgpsStatus`). */
+export interface AgpsStatus {
+  /** Tên file dữ liệu vệ tinh thiết bị cần; gửi đúng tên này trong `uploadAgpsFiles`. */
+  files: string[];
+  /** Mã nền tảng GNSS của thiết bị (dùng khi xin file từ nguồn dữ liệu). */
+  version: number | null;
+  /** Chu kỳ thiết bị báo (đơn vị chưa rõ). */
+  interval: number | null;
+  /** Thiết bị còn dữ liệu vệ tinh hợp lệ; null = không hỏi được. */
+  ephemerisValid: boolean | null;
+}
+
+/**
+ * Thiết bị hỏi AGPS (`onAgpsRequest`). `STATUS`: đã có file chưa (HT43 hỏi mỗi 60 s khi hết dữ liệu); `DOWNLOAD`: sẵn sàng
+ * nhận file; `POSITION`: xin vị trí điện thoại. `handled` = thư viện đã tự trả lời bằng vị trí / file app đặt sẵn.
+ */
+export interface AgpsRequestEvent {
+  deviceId: string;
+  request: 'STATUS' | 'DOWNLOAD' | 'POSITION';
+  handled: boolean;
+}
+
+/** Một file dữ liệu vệ tinh (app tự lấy từ nguồn được phép). `name` lấy từ `AgpsStatus.files`. */
+export interface AgpsFileData { name: string; base64: string }
 
 /**
  * Một mẫu của luồng nhịp tim liên tục (`onHeartRate`). `t` ms epoch lúc điện thoại nhận.
@@ -306,7 +333,7 @@ export type RemoteCameraEvent = 'SHUTTER' | 'OPENED' | 'CLOSED';
 
 export interface TransferProgress {
   deviceId: string;
-  /** `watchFace` | `contacts` | `firmware` */
+  /** `watchFace` | `contacts` | `firmware` | `agps` */
   what: string;
   /** 0–1. */
   fraction: number;

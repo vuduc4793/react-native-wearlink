@@ -1,6 +1,7 @@
 import type { EventSubscription } from 'react-native';
 import NativeOrNull, { type Spec } from './NativeSmartWear';
 import type {
+  AgpsFileData, AgpsRequestEvent, AgpsStatus,
   Alarm, CallBluetoothState, Capability, Contact, ControlValue, Device, DeviceControl, DeviceEventName, DeviceHistory,
   DiscoveredDevice, FirmwareCheck, HeartRateEvent, LocationRequest, MusicCommand, MusicState,
   NotificationApp, PhoneLinkConfig, PhoneLocation, Reading, RemoteCameraEvent, ScanState, SmsReplyConfig,
@@ -175,6 +176,27 @@ export const SmartWear = {
   stopHeartRateStream: (id: string) => call('stopHeartRateStream', id),
   /** Mẫu nhịp tim (tối đa ~1 mẫu/giây), mất kết nối, lỗi. Xem `HeartRateEvent`. */
   onHeartRate: (cb: (e: HeartRateEvent) => void) => on('heartRate', cb),
+
+  // ---------- AGPS (thiết bị có GPS riêng: HT43…) ----------
+
+  /**
+   * Tên file dữ liệu vệ tinh thiết bị cần, phiên bản GNSS, dữ liệu còn hợp lệ không (`features.agps`). Thư viện **không** tải file:
+   * app tự lấy từ nguồn được phép rồi gửi bằng `uploadAgpsFiles` / `setAgpsFiles`.
+   */
+  getAgpsStatus: (id: string) => call<AgpsStatus>('getAgpsStatus', id),
+  /**
+   * Vị trí điện thoại (WGS-84) giúp thiết bị bắt vệ tinh nhanh, không cần file. Gửi ngay nếu đang kết nối; thư viện giữ lại để tự
+   * gửi khi thiết bị hỏi (vị trí cũ hơn 6 giờ thì bỏ). `timestamp` ms epoch lúc lấy vị trí, mặc định bây giờ.
+   */
+  sendAgpsPosition: (id: string, p: { latitude: number; longitude: number; timestamp?: number }) => call('sendAgpsPosition', id, p),
+  /** Gửi file dữ liệu vệ tinh lên thiết bị (một lần gồm mọi file). Tiến độ qua `onTransferProgress` (`what: 'agps'`). */
+  uploadAgpsFiles: (id: string, files: AgpsFileData[]) => call('uploadAgpsFiles', id, { files }),
+  /** Một file: như `uploadAgpsFiles(id, [{ name, base64 }])`. */
+  uploadAgpsFile: (id: string, name: string, base64: string) => call('uploadAgpsFiles', id, { files: [{ name, base64 }] }),
+  /** Đặt sẵn file (chỉ trong bộ nhớ) để thư viện tự gửi khi thiết bị xin, kể cả lúc JS không chạy; `null` = bỏ. */
+  setAgpsFiles: (id: string, files: AgpsFileData[] | null) => call('setAgpsFiles', id, { files }),
+  /** Thiết bị hỏi AGPS. `handled` false + `STATUS` = chưa có file: app có file thì gọi `uploadAgpsFiles`. */
+  onAgpsRequest: (cb: (e: AgpsRequestEvent) => void) => on('agpsRequest', cb),
 
   // ---------- Báo thức ----------
 

@@ -187,7 +187,7 @@ Mọi gói `01 E9` đi qua kênh `34F1` (ghi không phản hồi) / `34F2`. Bộ
 | App → | `01 E9 AB 03 01 st` | Báo trạng thái file. App GF gửi `st = 03` sau khi tải xong ("31.3") | `sendAGPSFileStatus:Block:` `0x631a4`; GF `0x10058588c` |
 | ← Dev | `01 E9 AB 03 …` | Xác nhận trạng thái | `0x5e1e4` |
 | App → | `01 E9 AB 04 idxHi idxLo <≤ L-6 byte>` | Gói dữ liệu file; `idx` tăng liên tục qua các khối | `sendMultiDataToDevice:…` `0x5b7cc–0x5b818` |
-| App → | `01 E9 AB 04 FD FD x` | Chỉ sau **khối cuối**; `x` = XOR mọi byte các gói đã gửi trong khối đó, tính cả 6 byte đầu gói (suy luận: đồng hồ chỉ kiểm khối cuối) | `0x5bb9c–0x5bbd8` |
+| App → | `01 E9 AB 04 FD FD x` | Chỉ sau **gói cuối** (nghỉ 500 ms); `x` = XOR mọi byte của **mọi** gói `AB 04` đã gửi trong lần truyền, tính cả 6 byte đầu gói (GloryFitPro Android `uterkif/uterkcase.java:225-309`, biến `f4496uterkfor` chỉ đặt lại khi bắt đầu truyền) | `0x5bb9c–0x5bbd8` |
 | ← Dev | `01 E9 AC 04 01 st` | `st = 07`: gửi khối 4 KB tiếp; `01`: xong, thành công; `04`: thất bại; `06 HH LL`: mất gói, gửi lại từ `HHLL` | `0x66488–0x66730`, `0x64660–0x647c4` |
 
 `L` = `maxBluetooth5DataLength` (244). Khối = 4096 byte dữ liệu (`0x64a04`). Nếu `L ≤ 20` thì nghỉ 50 ms mỗi gói (`usleep(50000)` `0x5bae8`), ngược lại gửi liên tục.
@@ -220,6 +220,20 @@ Phản hồi (khớp `AgpsFileResult` của GloryFitPro Android): `{flag, msg, d
 | 1 | Nếu đã có `agpsFileNameArray` và file trong `apgsFile/` ⇒ `sendAGPSFileDataToBLE` (gói `AB 04`). Nếu chưa ⇒ `01 E9 AA 01` để lấy `fileList`/`version`, lưu lại, rồi gọi server |
 
 **(suy luận)** Vòng đầy đủ: đồng hồ `AC 03 01 02` ⇒ app (`AA 01` nếu chưa biết `version`), tải ⇒ `AB 03 01 03` ⇒ đồng hồ `AC 03 01 01` ⇒ app gửi file ⇒ `AC 04 01 01`.
+
+### 4.5 Đối chiếu GloryFitPro Android và cài trong SDK (21/10/2026)
+
+GloryFitPro 1.9.0.2 (`uterkif/uterkcase.java`, router `uterkdo/uterkbyte.java:466-471`) khớp bảng trên và bổ sung:
+- Vị trí `01 E9 AB 02 0C ts(4) lat(4) lon(4)`: giây Unix, toạ độ × 10⁷, big-endian (`:361-367`); đồng hồ xác nhận `01 E9 AB 02`.
+- Trạng thái file `AB 03 01 st` theo `EphemerisStatus`: 1 chuẩn bị, 2 đang gửi, 3 đã có file, 4 lỗi, 5 không hỗ trợ. Khi đồng hồ hỏi
+  (`AC 03 01 02`) app trả 3 nếu đủ file, ngược lại 1 rồi hỏi `AA 01` và tải (`ServicePresenter.responseEphemerisRequired`).
+- `AC 04 01 st`: 1 xong, 3 huỷ, 4 sai CRC, 5 file quá lớn, 6 gửi lại từ gói `HHLL` (byte 6–7), 7 gửi tiếp khối sau.
+- Còn dữ liệu hợp lệ: `56 FD` (33F1) → `56 FD st`, st 1 = hợp lệ (`:75-78`, `:210-217`).
+- Tên file trong mô tả bỏ phần mở rộng (`:318-322`).
+
+SDK (`UteAgps.kt` / `UteAgps.swift`, interface `AgpsSupport`) cài toàn bộ phần Bluetooth, **không gọi server**: app tự lấy file dữ liệu vệ tinh
+từ nguồn được phép. Chưa có file thì SDK gửi vị trí điện thoại (nếu app đã đưa) và trả `AB 03 01 05` (không hỗ trợ, để đồng hồ thôi hỏi;
+**chưa kiểm trên máy**, đổi bằng `GloryFitDebug.agpsNoFileStatus`).
 
 ---
 

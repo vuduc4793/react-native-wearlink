@@ -38,6 +38,9 @@ public enum GloryFitDebug {
     nonisolated(unsafe) public static var noRetry = false
     /// Gửi `A3` 9 byte (thêm giờ lệch GMT như SDK iOS gốc, doc 09 §1.5). Chưa kiểm chứng trên Y25/HT43 nên mặc định tắt.
     nonisolated(unsafe) public static var timeZoneByte = false
+    /// Trạng thái trả lời khi đồng hồ hỏi AGPS (`01 E9 AC 03 01 02`) mà app chưa đặt file: 5 = không hỗ trợ (mặc định, để
+    /// đồng hồ thôi hỏi mỗi 60 s; **chưa kiểm trên máy**), 1 = đang chuẩn bị (GloryFitPro gửi khi chưa có file), nil = không trả lời.
+    nonisolated(unsafe) public static var agpsNoFileStatus: Int? = UteAgps.statusNotSupport
 }
 
 /// Yêu cầu người dùng trong lúc bind. Core iOS chưa có khái niệm `PairingPrompt` nên để ở driver.
@@ -162,6 +165,8 @@ public final class GloryFitDevice: WearableDevice {
         }
         // Bài tập điều khiển từ điện thoại, số liệu realtime, xin vị trí điện thoại (`FD …` ngoài luồng đồng bộ).
         _ = subscribe { [weak self] p in self?.handleSportPacket(p) }
+        // AGPS: đồng hồ có GNSS hỏi dữ liệu vệ tinh / vị trí điện thoại (`01 E9 AC …`).
+        _ = subscribe { [weak self] p in self?.handleAgpsPacket(p) }
         // `D1 0A` (2 byte): đồng hồ bắt đầu tìm điện thoại; `D1 0A xx 00` (4 byte): dừng (`BluetoothLeService`).
         // `D1 0A xx 01` là đồng hồ dội lại `setPhoneRinging(true)`, không phải lệnh dừng.
         _ = subscribe { [weak self] p in
@@ -1101,6 +1106,190 @@ public final class GloryFitDevice: WearableDevice {
             }
         }
         onWorkoutEvent?(event)
+    }
+
+    // MARK: - AGPS (UteAgps)
+
+    /// Vị trí điện thoại app đưa gần nhất (giây Unix, vĩ độ, kinh độ) và lúc gửi lên đồng hồ lần cuối.
+    private var agpsPosition: (timestamp: Int64, latitude: Double, longitude: Double)?
+    private var agpsPositionSentAt = Date.distantPast
+    /// File app đặt sẵn (`setAgpsFiles`), chỉ trong bộ nhớ.
+    private var agpsFiles: [AgpsFile]?
+    private var agpsUploading = false
+
+    override public var supportsAgps: Bool { UteAgps.supported(features) }
+
+    /// Đồng hồ hỏi AGPS (HT43: `01 E9 AC 03 01 02` mỗi 60 s khi hết dữ liệu vệ tinh): trả lời bằng vị trí / file app đặt sẵn.
+    private func handleAgpsPacket(_ p: [UInt8]) {
+        guard let type = UteAgps.parseRequest(p) else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            var handled = false
+            do {
+                handled = try await self.answerAgps(type)
+            } catch {
+                SmartWearLog.w("[\(self.name)] trả lời AGPS lỗi: \(error.localizedDescription)")
+            }
+            self.onAgpsRequest?(AgpsRequest(type: type, handled: handled))
+        }
+    }
+
+    /// true = đã trả lời bằng dữ liệu app đặt (vị trí hoặc file).
+    private func answerAgps(_ type: AgpsRequestType) async throws -> Bool {
+        guard state == .connected else { return false }
+        switch type {
+        case .position:
+            return try await sendStoredAgpsPosition(force: true)
+        case .status:
+            // Như GloryFitPro `getEphemerisParams`: vị trí điện thoại trước, rồi trạng thái file (`responseEphemerisRequired`).
+            let sentPosition = try await sendStoredAgpsPosition(force: false)
+            if let st = agpsFiles != nil ? UteAgps.statusDone : GloryFitDebug.agpsNoFileStatus {
+                try await writeBle5(UteAgps.status(st))
+            }
+            return agpsFiles != nil || sentPosition
+        case .download:
+            guard let files = agpsFiles, !agpsUploading else { return false }
+            try await transferAgps(try UteAgps.payload(files)) { _ in }
+            return true
+        }
+    }
+
+    /// Gửi vị trí đã lưu nếu còn mới; không `force` thì tối đa mỗi `UteAgps.positionResend` (đồng hồ hỏi mỗi phút).
+    private func sendStoredAgpsPosition(force: Bool) async throws -> Bool {
+        guard let pos = agpsPosition else { return false }
+        let now = Date()
+        guard now.timeIntervalSince1970 - Double(pos.timestamp) <= UteAgps.positionMaxAge else { return false }
+        if !force, now.timeIntervalSince(agpsPositionSentAt) < UteAgps.positionResend { return false }
+        try await writeBle5(try UteAgps.position(timestamp: pos.timestamp, latitude: pos.latitude, longitude: pos.longitude))
+        agpsPositionSentAt = now
+        return true
+    }
+
+    private func requireAgps() throws {
+        guard state == .connected else { throw GloryFitError("Đồng hồ chưa kết nối") }
+        guard supportsAgps else { throw GattError.operationFailed("AGPS", "đồng hồ không hỗ trợ") }
+    }
+
+    private func writeBle5(_ bytes: [UInt8]) async throws {
+        guard gatt.hasCharacteristic(Ute.service5, Ute.write5) else { throw GloryFitError("Không có kênh 34F1") }
+        try await gatt.write(Ute.service5, Ute.write5, Data(bytes), withResponse: true)
+    }
+
+    /// `56 FD` (33F1, dữ liệu còn hợp lệ) + `01 E9 AA 01` (34F1, tên file / phiên bản).
+    override public func agpsInfo() async throws -> AgpsInfo {
+        try requireAgps()
+        let reply = try? await request(UteAgps.ephemerisState) { UteAgps.parseEphemerisState($0) != nil }
+        let valid = reply.flatMap(UteAgps.parseEphemerisState)
+        let packets = try await collect(UteAgps.info, ble5: true, idle: 3, match: UteAgps.isInfoPacket, end: UteAgps.isInfoEnd)
+        SmartWearLog.i("[\(name)] AGPS: 56 FD → \(String(describing: valid)), AA 01 → \(packets.map(\.hex).joined(separator: " | "))")
+        guard packets.contains(where: UteAgps.isInfoEnd) else { throw GloryFitError("Đồng hồ không trả thông tin AGPS (01 E9 AA 01)") }
+        return UteAgps.parseInfo(packets, ephemerisValid: valid)
+    }
+
+    /// `01 E9 AB 02 0C ts lat lon`; lưu lại để tự gửi khi đồng hồ hỏi. Chưa kết nối thì chỉ lưu.
+    override public func sendAgpsPosition(latitude: Double, longitude: Double, timestamp: Date = Date()) async throws {
+        let ts = Int64(timestamp.timeIntervalSince1970)
+        let packet = try UteAgps.position(timestamp: ts, latitude: latitude, longitude: longitude)
+        agpsPosition = (ts, latitude, longitude)
+        guard state == .connected else { return }
+        try requireAgps()
+        do {
+            _ = try await request(packet, ble5: true) { UteAgps.isPositionAck($0) }
+        } catch {
+            SmartWearLog.w("[\(name)] AGPS: đồng hồ không xác nhận vị trí (\(error.localizedDescription))")
+        }
+        agpsPositionSentAt = Date()
+    }
+
+    override public func setAgpsFiles(_ files: [AgpsFile]?) throws {
+        if let files { _ = try UteAgps.payload(files) }  // kiểm giới hạn ngay để app biết lỗi
+        agpsFiles = files
+    }
+
+    /// Như luồng app gốc: báo đã có file (`AB 03 01 03`), chờ đồng hồ xin (`AC 03 01 01`, tối đa 10 s; không xin vẫn gửi),
+    /// rồi truyền (`transferAgps`).
+    override public func uploadAgpsFiles(_ files: [AgpsFile], progress: @escaping (Double) -> Void = { _ in }) async throws {
+        try requireAgps()
+        let payload = try UteAgps.payload(files)
+        let asked = (try? await request(UteAgps.status(UteAgps.statusDone), ble5: true, timeout: 10) { UteAgps.parseRequest($0) == .download }) != nil
+        if !asked { SmartWearLog.w("[\(name)] AGPS: đồng hồ chưa xin file sau AB 03 01 03, vẫn gửi") }
+        try await transferAgps(payload, progress: progress)
+    }
+
+    /// Truyền `payload` bằng các gói `01 E9 AB 04 idx…` lên 34F1: qua mỗi mốc 4 KB chờ `AC 04 01 07` (tối đa 5 s),
+    /// `AC 04 01 06 HH LL` = gửi lại từ gói HHLL; sau gói cuối 500 ms gửi `AB 04 FD FD xor`, chờ `AC 04 01 01`.
+    private func transferAgps(_ payload: [UInt8], progress: (Double) -> Void) async throws {
+        try await lock.withLock {
+            let channel = PacketChannel()
+            waiter = Waiter(match: UteAgps.isTransferResult, channel: channel)
+            agpsUploading = true
+            defer {
+                waiter = nil
+                agpsUploading = false
+            }
+            let writable = gatt.maximumWriteLength(withResponse: false)
+            let packetLength = max(20, GloryFitDebug.packetLength ?? min(features.maxPacketLength ?? 20, writable))
+            let chunk = packetLength - 6
+            let packets = UteAgps.packets(payload, chunk: chunk)
+            SmartWearLog.i("[\(name)] AGPS: gửi \(payload.count) byte, \(packets.count) gói × \(chunk) byte")
+            func failure(_ st: Int) -> GloryFitError {
+                switch st {
+                case UteAgps.transferCancelled: return GloryFitError("Đồng hồ huỷ nhận AGPS")
+                case UteAgps.transferCrc: return GloryFitError("Đồng hồ báo sai CRC dữ liệu AGPS")
+                case UteAgps.transferTooLarge: return GloryFitError("Dữ liệu AGPS quá lớn với đồng hồ")
+                default: return GloryFitError(String(format: "Đồng hồ trả mã AGPS %02X", st))
+                }
+            }
+            // Gói kết quả giữa chừng: trả về gói cần gửi lại, nil = tiếp tục; lỗi thì ném.
+            func check(_ r: [UInt8]) throws -> Int? {
+                let st = UteAgps.transferStatus(r)
+                if st == UteAgps.transferResend { return UteAgps.resendFrom(r) }
+                if st == UteAgps.transferContinue || st == UteAgps.transferOk { return nil }
+                throw failure(st)
+            }
+            var seq = 0
+            var lastSector = 0
+            var resends = 0
+            var silentSectors = 0
+            var early = false  // `AC 04 01 07` đến trước mốc khối: giữ lại
+            while seq < packets.count {
+                try await gatt.write(Ute.service5, Ute.write5, Data(packets[seq]), withResponse: false)
+                progress(Double(seq + 1) / Double(packets.count))
+                var resendAt: Int?
+                if let pushed = channel.tryReceive() {
+                    if UteAgps.transferStatus(pushed) == UteAgps.transferContinue { early = true }
+                    resendAt = try check(pushed)
+                }
+                let sector = ((seq + 1) * chunk) / UteAgps.sectorBytes
+                if resendAt == nil, seq < packets.count - 1, sector != lastSector {
+                    lastSector = sector
+                    var r: [UInt8]?
+                    if !early { r = try await channel.receive(timeout: 5) }
+                    silentSectors = (r == nil && !early) ? silentSectors + 1 : 0
+                    early = false
+                    if silentSectors >= 3 { throw GloryFitError("Đồng hồ ngừng phản hồi khi nhận AGPS ở gói \(seq)/\(packets.count)") }
+                    if let r { resendAt = try check(r) }
+                } else if resendAt == nil, packetLength <= 20 {
+                    try await Task.sleep(nanoseconds: 50_000_000)  // như SDK iOS gốc khi gói ≤ 20 byte
+                } else if resendAt == nil, seq > 0, seq % 10 == 0 {
+                    try await Task.sleep(nanoseconds: 20_000_000)
+                }
+                if let from = resendAt {
+                    resends += 1
+                    if resends > 20 { throw GloryFitError("Đồng hồ yêu cầu gửi lại AGPS quá nhiều lần") }
+                    seq = min(max(from, 0), packets.count - 1)
+                } else {
+                    seq += 1
+                }
+            }
+            try await Task.sleep(nanoseconds: 500_000_000)
+            try await gatt.write(Ute.service5, Ute.write5, Data(UteAgps.endPacket(UteAgps.xor(packets))), withResponse: false)
+            guard let result = try await channel.receive(timeout: 30, where: { UteAgps.transferStatus($0) != UteAgps.transferContinue }) else {
+                throw GloryFitError("Không nhận được kết quả truyền AGPS")
+            }
+            if UteAgps.transferStatus(result) != UteAgps.transferOk { throw failure(UteAgps.transferStatus(result)) }
+            SmartWearLog.i("[\(name)] AGPS: đồng hồ nhận xong \(payload.count) byte")
+        }
     }
 
     // Sự kiện lẻ / hệ thống.

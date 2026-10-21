@@ -82,19 +82,9 @@ extension Ute {
         return out.sorted { $0.start > $1.start }
     }
 
-    /// Tên môn theo mã (`SportsMode.MULTIPLE_SPORTS_MODE_*` của SDK UTE).
-    public static func sportName(_ type: Int) -> String { sportNames[type] ?? "Môn thể thao #\(type)" }
+    /// Tên môn tiếng Việt theo mã (`SportsMode.MULTIPLE_SPORTS_MODE_*` của SDK UTE, `UteSportCatalog`).
+    public static func sportName(_ type: Int) -> String { UteSportCatalog.names[type]?.vi ?? "Môn thể thao #\(type)" }
 
-    static let sportNames: [Int: String] = [
-        1: "Chạy bộ", 2: "Đạp xe", 3: "Nhảy dây", 4: "Bơi", 5: "Cầu lông", 6: "Bóng bàn", 7: "Quần vợt",
-        8: "Leo núi", 9: "Đi bộ", 10: "Bóng rổ", 11: "Bóng đá", 12: "Bóng chày", 13: "Bóng chuyền",
-        14: "Cricket", 15: "Bóng bầu dục", 16: "Khúc côn cầu", 17: "Nhảy", 18: "Đạp xe trong nhà", 19: "Yoga",
-        20: "Gập bụng", 21: "Máy chạy bộ", 22: "Thể dục dụng cụ", 23: "Chèo thuyền", 24: "Bật nhảy",
-        25: "Tập tự do", 26: "Đi bộ trong nhà", 27: "Chạy trong nhà", 28: "Tập sức mạnh", 29: "Tập bậc thang",
-        30: "Cưỡi ngựa", 31: "Máy elip", 32: "Thái cực quyền", 33: "Đá cầu", 34: "Quyền anh",
-        35: "Đi bộ ngoài trời", 36: "Chạy địa hình", 37: "Trượt tuyết", 39: "Taekwondo", 41: "Máy chèo",
-        43: "Đi bộ đường dài", 46: "Karate", 49: "Pilates", 75: "Golf", 81: "Trượt băng", 96: "Pickleball",
-        97: "HIIT", 108: "Hít xà", 109: "Chống đẩy", 110: "Plank", 115: "Marathon", 134: "Đạp xe trong nhà",
-        151: "Ba môn phối hợp", 155: "Cử tạ", 166: "Chạy trong nhà", 167: "Tập luyện chung",
-    ]
+    /// Tên môn tiếng Anh (theo GloryFitPro); nil nếu mã không có trong danh mục.
+    public static func sportNameEn(_ type: Int) -> String? { UteSportCatalog.names[type]?.en }
 }

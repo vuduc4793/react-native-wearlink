@@ -1,7 +1,7 @@
 /**
  * App mẫu cho react-native-wearlink: quét, kết nối (giữ kết nối), đo, đồng bộ lịch sử, cài đặt, thời tiết, danh bạ,
  * tìm điện thoại, thông báo/cuộc gọi/nhạc/SMS (Android), mặt đồng hồ, bài tập, camera từ xa, nhịp tim liên tục, đường GPS do
- * đồng hồ ghi, AGPS. Mọi thao tác đi qua API trong
+ * đồng hồ ghi, AGPS, chọn môn tập hiện trên đồng hồ. Mọi thao tác đi qua API trong
  * `react-native-wearlink`. Nút "Kiểm tra API" chạy lần lượt các lệnh không phá dữ liệu và ghi `SWTEST …` ra log
  * (Android: `adb logcat -s ReactNativeJS`).
  */
@@ -24,6 +24,8 @@ import SmartWear, {
   type DiscoveredDevice,
   type HeartRateEvent,
   type Reading,
+  type SportListLimits,
+  type SportType,
   type Workout,
 } from 'react-native-wearlink';
 
@@ -75,6 +77,8 @@ async function selfTest(d: Device, log: (s: string) => void) {
   await step('getWatchFaceInfo', f.watchFace, () => SmartWear.getWatchFaceInfo(d.id));
   await step('getWatchFaceSlots', f.watchFaceSlots, () => SmartWear.getWatchFaceSlots(d.id));
   await step('getSportTypes', f.sportList, () => SmartWear.getSportTypes(d.id));
+  await step('getSportListLimits', f.sportList, () => SmartWear.getSportListLimits(d.id));
+  await step('getSportCatalog', f.sportList, async () => (await SmartWear.getSportCatalog(d.id)).length);
   await step('getAlarms', f.alarms, async () => ({max: f.maxAlarms, alarms: await SmartWear.getAlarms(d.id)}));
   await step('getNotificationApps', f.notifications, async () => (await SmartWear.getNotificationApps(d.id)).map(a => a.key));
   await step('getSmsReply', f.smsReply, () => SmartWear.getSmsReply(d.id));
@@ -133,6 +137,83 @@ function workoutLine(w: Workout) {
   const hr = w.avgHeartRate ? ` · HR ${w.avgHeartRate}` : '';
   const gps = w.track?.length ? ` · GPS ${w.track.length} điểm` : '';
   return `${w.name} · ${start} · ${Math.round(w.activeSeconds / 60)} phút${km}${hr}${gps}`;
+}
+
+/** Môn hiện trước (theo `position`), môn ẩn sau, giữ thứ tự thiết bị trả về. */
+function sortSports(list: SportType[]) {
+  const shown = list.filter(x => x.shown).sort((a, b) => (a.position || 999) - (b.position || 999));
+  return [...shown, ...list.filter(x => !x.shown)];
+}
+
+/**
+ * Môn tập trên đồng hồ: bật/tắt hiện, đổi thứ tự môn hiện, Lưu (hỏi lại trước khi ghi). Chỉ chọn trong danh sách đồng hồ giữ
+ * (Y25: 50 môn); danh mục 245 môn của hãng chỉ để tra tên, không thêm được vào đồng hồ.
+ */
+function SportListEditor({d, note}: {d: Device; note: (s: string) => void}) {
+  const [sports, setSports] = useState<SportType[] | null>(null);
+  const [limits, setLimits] = useState<SportListLimits | null>(null);
+  const [catalog, setCatalog] = useState(0);
+  const load = () =>
+    Promise.all([SmartWear.getSportTypes(d.id), SmartWear.getSportListLimits(d.id), SmartWear.getSportCatalog(d.id)])
+      .then(([list, l, cat]) => {
+        setSports(sortSports(list));
+        setLimits(l);
+        setCatalog(cat.length);
+      })
+      .catch(e => note(`môn tập LỖI ${e?.message ?? e}`));
+  if (!sports) return <Button title="Môn tập" onPress={load} />;
+
+  const shownCount = sports.filter(x => x.shown).length;
+  const ok = !limits || (shownCount >= limits.minShown && shownCount <= limits.maxShown);
+  const toggle = (type: number) => setSports(sortSports(sports.map(x => (x.type === type ? {...x, shown: !x.shown, position: x.shown ? 0 : 999} : x))));
+  const move = (i: number, by: number) => {
+    const shown = sports.filter(x => x.shown);
+    const j = i + by;
+    if (j < 0 || j >= shown.length) return;
+    [shown[i], shown[j]] = [shown[j], shown[i]];
+    setSports([...shown.map((x, k) => ({...x, position: k + 1})), ...sports.filter(x => !x.shown)]);
+  };
+  const save = () =>
+    Alert.alert('Ghi danh sách môn', `Hiện ${shownCount} môn trên ${d.name}?`, [
+      {text: 'Huỷ', style: 'cancel'},
+      {
+        text: 'Ghi',
+        onPress: () => {
+          let n = 0;
+          const out = sports.map(x => (x.shown ? {...x, position: ++n} : {...x, position: 0}));
+          SmartWear.setSportList(d.id, out).then(() => note('môn tập ✓ đã ghi')).then(load)
+            .catch(e => note(`môn tập LỖI ${e?.message ?? e}`));
+        },
+      },
+    ]);
+  let shownIndex = -1;
+  return (
+    <View style={{marginTop: 10}}>
+      <Text style={styles.section}>Môn tập trên đồng hồ ({sports.length} môn)</Text>
+      <Text style={[styles.sub, !ok && {color: '#ff453a'}]}>
+        Đang hiện {shownCount}{limits ? ` · cho phép ${limits.minShown}–${limits.maxShown}` : ''}
+        {catalog ? ` · danh mục hãng ${catalog} môn (đồng hồ chỉ giữ ${sports.length})` : ''}
+      </Text>
+      {sports.map(x => {
+        const i = x.shown ? ++shownIndex : -1;
+        return (
+          <View key={x.type} style={styles.controlRow}>
+            <Text style={[styles.sub, {flex: 1}, !x.shown && {opacity: 0.5}]}>
+              {x.shown ? `${i + 1}. ` : ''}{x.name}{x.nameEn ? ` · ${x.nameEn}` : ''}
+            </Text>
+            {x.shown && <Button title="↑" onPress={() => move(i, -1)} disabled={i === 0} />}
+            {x.shown && <Button title="↓" onPress={() => move(i, 1)} disabled={i === shownCount - 1} />}
+            <Button title={x.shown ? 'Ẩn' : 'Hiện'} onPress={() => toggle(x.type)} />
+          </View>
+        );
+      })}
+      <View style={styles.row}>
+        <Button title="Lưu lên đồng hồ" onPress={save} disabled={!ok} />
+        <Button title="Đọc lại" onPress={load} />
+        <Button title="Đóng" onPress={() => setSports(null)} />
+      </View>
+    </View>
+  );
 }
 
 function Button({title, onPress, disabled}: {title: string; onPress: () => void; disabled?: boolean}) {
@@ -331,6 +412,7 @@ export default function App() {
                     </Text>
                   </View>
                 )}
+                {d.features.sportList && <SportListEditor d={d} note={note} />}
                 {(workouts[d.id] ?? []).length > 0 && (
                   <View style={{marginTop: 10}}>
                     <Text style={styles.section}>Bài tập ({workouts[d.id].length})</Text>

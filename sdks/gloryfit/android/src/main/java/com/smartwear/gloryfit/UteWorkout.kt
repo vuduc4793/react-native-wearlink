@@ -220,12 +220,28 @@ object UteWorkout {
             var i = 4
             while (i + 2 < p.size) {
                 val id = Ute.u(p, i)
-                if (id > 0) sports += SportType(id, Ute.sportName(id), shown = Ute.u(p, i + 1) == 1, position = Ute.u(p, i + 2))
+                if (id > 0) sports += SportType(id, Ute.sportName(id), shown = Ute.u(p, i + 1) == 1, position = Ute.u(p, i + 2), nameEn = Ute.sportNameEn(id))
                 i += 3
             }
         }
         if (!ended && sports.isEmpty()) return null
         return SportList(sports, if (min <= 0) 1 else min, if (max <= 0) 4 else max)
+    }
+
+    /**
+     * Chuẩn hoá danh sách trước khi ghi, như GloryFit `sendSportManagementListsSection` (`WriteCommandToBLE.java:4840-4940`):
+     * gửi **mọi** môn đồng hồ có; môn hiện đánh số 1..n theo [SportType.position] (bằng nhau thì giữ thứ tự danh sách), môn ẩn = 0.
+     * Số môn hiện phải nằm trong [limits] (nếu biết), không thì [IllegalArgumentException].
+     */
+    fun normalizeSportList(sports: List<SportType>, limits: IntRange?): List<SportType> {
+        require(sports.map { it.type }.toSet().size == sports.size) { "Danh sách môn có mã trùng" }
+        require(sports.all { it.type in 1..255 }) { "Mã môn phải trong 1..255" }
+        val shown = sports.withIndex().filter { it.value.shown }.sortedWith(compareBy({ it.value.position.takeIf { p -> p > 0 } ?: Int.MAX_VALUE }, { it.index }))
+        if (limits != null) {
+            require(shown.size in limits) { "Số môn hiện ${shown.size} ngoài giới hạn ${limits.first}..${limits.last}" }
+        }
+        val pos = shown.withIndex().associate { (n, iv) -> iv.value.type to n + 1 }
+        return sports.map { it.copy(position = pos[it.type] ?: 0) }
     }
 
     /**

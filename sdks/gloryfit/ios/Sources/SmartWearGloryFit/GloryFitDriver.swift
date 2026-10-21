@@ -117,7 +117,7 @@ public final class GloryFitDevice: WearableDevice {
     /// Phiên gửi vị trí điện thoại (đặt lại mỗi lần đồng hồ xin / thôi xin).
     private var location = LocationSession()
     /// Số môn hiện ít / nhiều nhất trên đồng hồ (đọc từ `FD 48 AA`).
-    public private(set) var sportListLimits: ClosedRange<Int>?
+    private var readSportListLimits: ClosedRange<Int>?
 
     public init(scanned: ScannedDevice, match: DriverMatch) {
         gatt = GattConnection(id: scanned.id)
@@ -1007,17 +1007,29 @@ public final class GloryFitDevice: WearableDevice {
                                         end: UteSport.isSportListEnd)
         guard !packets.isEmpty else { throw GloryFitError("Đồng hồ không trả danh sách môn (FD 48 AA)") }
         let list = UteSport.parseSportList(packets)
-        if let lo = list.minShown, let hi = list.maxShown { sportListLimits = lo...max(lo, hi) }
+        // Như Kotlin / GloryFitPro: min ≤ 0 ⇒ 1, max ≤ 0 ⇒ 4.
+        let lo = (list.minShown ?? 0) > 0 ? list.minShown! : 1
+        let hi = (list.maxShown ?? 0) > 0 ? list.maxShown! : 4
+        readSportListLimits = lo...max(lo, hi)
         return list.sports
     }
 
-    /// Ghi danh sách môn (`type`, `shown`, `position` gửi nguyên như mảng truyền vào; nên sửa từ kết quả `sportTypes`).
+    override public var sportListLimits: ClosedRange<Int>? { readSportListLimits }
+
+    override public var sportCatalog: [SportName] {
+        UteSportCatalog.names.keys.sorted().map { SportName(type: $0, name: UteSportCatalog.names[$0]!.vi, nameEn: UteSportCatalog.names[$0]!.en) }
+    }
+
+    /// Ghi danh sách môn: gửi mọi môn trong mảng (nên sửa từ kết quả `sportTypes`), môn hiện đánh lại vị trí 1..n
+    /// (`UteSport.normalizeSportList`), số môn hiện phải trong `sportListLimits`.
     override public func setSportList(_ sports: [SportType]) async throws {
         guard state == .connected else { throw GloryFitError("Đồng hồ chưa kết nối") }
         guard supportsSportList else { throw GloryFitError("Đồng hồ không hỗ trợ danh sách môn") }
         guard gatt.hasCharacteristic(Ute.service5, Ute.write5) else { throw GloryFitError("Không có kênh 34F1") }
+        guard !sports.isEmpty else { throw GloryFitError("Danh sách môn rỗng") }
+        let list = try UteSport.normalizeSportList(sports, limits: readSportListLimits)
         let length = min(features.maxPacketLength ?? 20, gatt.maximumWriteLength(withResponse: false))
-        let packets = UteSport.sportListPackets(sports, packetLength: length)
+        let packets = UteSport.sportListPackets(list, packetLength: length)
         try await lock.withLock {
             let channel = PacketChannel()
             waiter = Waiter(match: { $0.count >= 3 && $0[0] == 0xFD && $0[1] == 0x48 && ($0[2] == 0xFB || $0[2] == 0xFD) }, channel: channel)

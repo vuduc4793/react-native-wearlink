@@ -5,7 +5,7 @@ import type {
   Alarm, CallBluetoothState, Capability, Contact, ControlValue, Device, DeviceControl, DeviceEventName, DeviceHistory,
   DiscoveredDevice, FirmwareCheck, HeartRateEvent, LocationRequest, MusicCommand, MusicState,
   NotificationApp, PhoneLinkConfig, PhoneLocation, Reading, RemoteCameraEvent, ScanState, SmsReplyConfig,
-  SmsReplyRequest, SportType, SyncProgress, TransferProgress, WatchFaceInfo, WatchFaceSlot, WeatherCondition,
+  SmsReplyRequest, SportListLimits, SportName, SportType, SyncProgress, TransferProgress, WatchFaceInfo, WatchFaceSlot, WeatherCondition,
   WatchFaceImageStyle, WeatherForecast, WorkoutEvent,
 } from './types';
 
@@ -151,9 +151,21 @@ export const SmartWear = {
 
   // ---------- Bài tập từ điện thoại ----------
 
+  /** Danh sách môn **thiết bị đang giữ** (Y25: 50 môn), kèm môn nào đang hiện và thứ tự. */
   getSportTypes: (id: string) => call<SportType[]>('getSportTypes', id),
-  /** Ghi danh sách môn hiện trên thiết bị (`shown` + `position`). */
+  /**
+   * Ghi danh sách môn hiện trên thiết bị. Truyền **mọi** môn của `getSportTypes` (đổi `shown`, xếp thứ tự bằng `position`
+   * 1..n; thư viện đánh số lại, môn ẩn = 0). Số môn hiện phải trong `getSportListLimits`, không thì lỗi. Không thêm được môn
+   * ngoài danh sách thiết bị giữ.
+   */
   setSportList: (id: string, sports: SportType[]) => call('setSportList', id, { sports }),
+  /** Số môn được hiện ít / nhiều nhất (Y25: 4..50). Đọc danh sách môn nếu chưa đọc. `null` = thiết bị không báo. Từ 0.1.5. */
+  getSportListLimits: (id: string) => call<SportListLimits | null>('getSportListLimits', id),
+  /**
+   * Danh mục mọi môn hãng biết (GloryFit/UTE: 245 môn, "100+ chế độ" của app hãng). Dùng để hiện tên; thiết bị chỉ giữ một
+   * phần (`getSportTypes`). Rỗng nếu driver không có danh mục. Từ 0.1.5.
+   */
+  getSportCatalog: (id: string) => call<SportName[]>('getSportCatalog', id),
   startWorkout: (id: string, sportType: number) => call('startWorkout', id, { sportType }),
   pauseWorkout: (id: string) => call('pauseWorkout', id),
   resumeWorkout: (id: string) => call('resumeWorkout', id),

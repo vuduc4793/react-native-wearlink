@@ -335,7 +335,14 @@ export interface WatchFaceInfo {
 }
 export interface WatchFaceSlot { index: number; faceId: number }
 
-export interface SportType { type: number; name: string; shown: boolean; position: number }
+/**
+ * Một môn trên thiết bị. `name` tiếng Việt, `nameEn` tiếng Anh (từ 0.1.5). `position`: thứ tự hiện 1..n, môn ẩn = 0.
+ */
+export interface SportType { type: number; name: string; shown: boolean; position: number; nameEn?: string | null }
+/** Số môn được hiện ít / nhiều nhất trên thiết bị (`getSportListLimits`). */
+export interface SportListLimits { minShown: number; maxShown: number }
+/** Một môn trong danh mục của hãng (`getSportCatalog`). Danh mục lớn hơn danh sách thiết bị giữ. */
+export interface SportName { type: number; name: string; nameEn: string }
 export type WorkoutState = 'STARTED' | 'PAUSED' | 'RESUMED' | 'STOPPED';
 export interface WorkoutRealtime {
   sportType: number;

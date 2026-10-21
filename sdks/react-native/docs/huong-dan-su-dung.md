@@ -344,6 +344,29 @@ await SmartWear.runAction(id, 'find.start');                                // k
   xác nhận với nội dung `confirm` trước khi gọi `runAction` / `setControl`.
 - Hiệu chuẩn huyết áp (GE54) làm sai số đo của mọi lần đo sau. Chỉ để cho người dùng tự đặt, đừng ghi tự động.
 
+### Môn tập hiện trên đồng hồ (Y25, HT43)
+
+"Hơn 100 chế độ tập" trong app GloryFit/GloryFitPro là **danh mục tên môn của app** (GloryFitPro biết 245 môn), không phải số
+môn đồng hồ chứa. Y25 giữ **50 môn**. App hãng (và thư viện) chỉ cho bật/tắt hiện và đổi thứ tự trong 50 môn đó, không thêm được
+môn ngoài danh sách đồng hồ giữ. Kiểm `device.features.sportList` trước khi hiện màn này.
+
+```ts
+const sports = await SmartWear.getSportTypes(id);        // [{type, name, nameEn, shown, position}] — 50 môn của Y25
+const limits = await SmartWear.getSportListLimits(id);   // {minShown: 4, maxShown: 50} (từ 0.1.5)
+const catalog = await SmartWear.getSportCatalog(id);     // 245 môn {type, name, nameEn}: chỉ để tra tên (từ 0.1.5)
+
+// Hiện thêm môn 9, xếp lên đầu:
+const next = sports.map(s => (s.type === 9 ? {...s, shown: true, position: 0} : s));
+await SmartWear.setSportList(id, next);
+```
+
+- Truyền **mọi** môn của `getSportTypes` vào `setSportList`, kể cả môn ẩn: đồng hồ nhận cả danh sách một lần (như app hãng).
+- Thứ tự hiện theo `position` (1, 2, 3…); thư viện đánh số lại 1..n, môn `position` 0 xếp cuối, môn ẩn luôn 0.
+- Số môn hiện phải trong `getSportListLimits`, nếu không `setSportList` báo lỗi và không ghi gì.
+- Hỏi người dùng trước khi ghi: danh sách trên đồng hồ đổi ngay.
+- `name` là tiếng Việt, `nameEn` tiếng Anh (theo GloryFitPro). Tên bài tập trong lịch sử (`workouts[].name`) lấy từ cùng danh mục.
+- App mẫu: phần "Môn tập" trong thẻ thiết bị (`example/App.tsx`, `SportListEditor`).
+
 ## 10. Tính năng điện thoại ↔ thiết bị
 
 | Tính năng | Android | iOS |

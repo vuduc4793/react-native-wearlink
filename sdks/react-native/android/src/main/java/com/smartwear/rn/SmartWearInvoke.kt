@@ -46,7 +46,9 @@ internal class SmartWearInvoke(
     private val phoneLink: () -> PhoneLink,
     private val event: (type: String, deviceId: String, body: Map<String, Any?>) -> Unit,
     private val history: (com.smartwear.core.DeviceHistory) -> WritableMap,
+    scope: kotlinx.coroutines.CoroutineScope,
 ) {
+    private val heartRate = HeartRateStreams(scope, event)
 
     suspend fun run(method: String, id: String, a: ReadableMap): Any? {
         // ---------- Lệnh cấp module ----------
@@ -218,6 +220,10 @@ internal class SmartWearInvoke(
                 f.updateFirmware(image) { p -> event("transferProgress", d.id, mapOf("what" to "firmware", "fraction" to p.toDouble())) }
             }
             "cancelFirmwareUpdate" -> (d as? FirmwareUpdatable)?.cancelFirmwareUpdate().let { null }
+
+            // ---------- Nhịp tim liên tục (sự kiện `heartRate`) ----------
+            "startHeartRateStream" -> heartRate.start(d).let { null }
+            "stopHeartRateStream" -> heartRate.stop(d.id).let { null }
 
             else -> throw InvokeException("unknown_method", "Không có lệnh $method")
         }

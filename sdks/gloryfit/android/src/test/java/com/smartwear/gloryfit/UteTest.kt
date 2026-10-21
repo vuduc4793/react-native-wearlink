@@ -5,6 +5,7 @@ import com.smartwear.core.SleepStage
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDateTime
@@ -211,5 +212,24 @@ class UteTest {
     @Test fun noWorkoutsWhenCountZero() {
         assertEquals(0, Ute.workoutCount(wbytes("FD FA 00 00 00 00 00 00 00 00")))
         assertEquals(emptyList<Any>(), Ute.parseWorkouts(listOf(wbytes("FD FA 00 00 00 00 00 00 00 00")), java.time.ZoneId.of("UTC"), true))
+    }
+
+    @Test
+    fun heartRateStreamPackets() {
+        // E5 11 00 rr giữa chừng / E5 00 00 rr kết quả ⇒ mẫu; rr = 0 (khởi động) ⇒ bỏ qua; st ≠ 0 ⇒ chưa đeo.
+        assertEquals(72, Ute.parseHeartRateStream(hex("E5 11 00 48"))!!.bpm)
+        val done = Ute.parseHeartRateStream(hex("E5 00 00 52"), timestamp = 9)!!
+        assertEquals(82, done.bpm)
+        assertEquals(true, done.contact)
+        assertEquals(9L, done.timestamp)
+        assertNull(Ute.parseHeartRateStream(hex("E5 11 00 00")))
+        val off = Ute.parseHeartRateStream(hex("E5 00 01 00"))!!
+        assertNull(off.bpm)
+        assertEquals(false, off.contact)
+        // F7 03 (đo định kỳ) / F7 0B (đo trên đồng hồ): byte 8 là nhịp tim.
+        assertEquals(87, Ute.parseHeartRateStream(hex("F7 03 07 EA 0A 10 11 05 57"))!!.bpm)
+        assertEquals(80, Ute.parseHeartRateStream(hex("F7 0B 07 EA 0A 10 11 05 50"))!!.bpm)
+        assertNull(Ute.parseHeartRateStream(hex("E5 11")))
+        assertNull(Ute.parseHeartRateStream(hex("A2 50")))
     }
 }

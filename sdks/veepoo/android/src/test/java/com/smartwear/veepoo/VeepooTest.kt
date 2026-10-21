@@ -184,6 +184,23 @@ class VeepooTest {
     }
 
     @Test
+    fun heartRateStreamPackets() {
+        val z = " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+        // Đang khởi động cảm biến (0) ⇒ bỏ qua; mọi giá trị hợp lệ đều phát, không đếm mẫu.
+        assertNull(VeepooMeasure.heartRateSample(hex("D0 00$z")))
+        val ok = VeepooMeasure.heartRateSample(hex("D0 4D$z"), timestamp = 7) as VeepooMeasure.StreamPacket.Sample
+        assertEquals(77, ok.sample.bpm)
+        assertEquals(true, ok.sample.contact)
+        assertEquals(7L, ok.sample.timestamp)
+        val notWorn = VeepooMeasure.heartRateSample(hex("D0 01$z")) as VeepooMeasure.StreamPacket.Sample
+        assertNull(notWorn.sample.bpm)
+        assertEquals(false, notWorn.sample.contact)
+        assertTrue(VeepooMeasure.heartRateSample(hex("D0 01 00 00 FD 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")) is VeepooMeasure.StreamPacket.Failed)
+        assertTrue(VeepooMeasure.heartRateSample(hex("D0 4D 00 00 00 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00")) is VeepooMeasure.StreamPacket.Failed)
+        assertNull(VeepooMeasure.heartRateSample(hex("80 4D")))
+    }
+
+    @Test
     fun measureSpo2() {
         val parse = VeepooMeasure.spo2(samples = 3)
         assertEquals(ReadingStatus.MEASURING, parse(hex("80 01 00 00 00 64 00 00 00 00 00 00 00 00 00 00 00 00 00 00"))!!.first.status)

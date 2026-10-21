@@ -393,6 +393,19 @@ object Ute {
         return com.smartwear.core.Reading(Capability.HEART_RATE, com.smartwear.core.ReadingStatus.OK, value = bpm.toDouble())
     }
 
+    /**
+     * Mẫu của luồng nhịp tim liên tục: `E5 fin st rr` với st = 0 và rr 30–220 ⇒ nhịp tim; st ≠ 0 ⇒ chưa đeo (`bpm` null,
+     * `contact` false); rr = 0 (đang khởi động) ⇒ null. `F7 03`/`F7 0B` (đồng hồ tự đẩy) cũng là một mẫu, giờ là lúc nhận.
+     */
+    fun parseHeartRateStream(p: ByteArray, timestamp: Long = System.currentTimeMillis()): com.smartwear.core.HeartRateSample? {
+        if (p.size >= 9 && u(p, 0) == 0xF7 && (u(p, 1) == 0x03 || u(p, 1) == 0x0B)) {
+            return u(p, 8).takeIf { it in 30..220 }?.let { com.smartwear.core.HeartRateSample(it, contact = true, timestamp = timestamp) }
+        }
+        if (p.size < 4 || u(p, 0) != 0xE5) return null
+        if (u(p, 2) != 0) return com.smartwear.core.HeartRateSample(null, contact = false, timestamp = timestamp)
+        return u(p, 3).takeIf { it in 30..220 }?.let { com.smartwear.core.HeartRateSample(it, contact = true, timestamp = timestamp) }
+    }
+
     /** Bước theo giờ: `B2 YYYY MM DD HH sH sL`. */
     fun parseSteps(packets: List<ByteArray>, zone: ZoneId): List<HistoryPoint> = packets
         .filter { it.size >= 8 && u(it, 0) == 0xB2 && u(it, 1) != 0xFD }

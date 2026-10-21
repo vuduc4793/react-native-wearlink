@@ -187,6 +187,22 @@ public enum ReadingStatus: String, Sendable {
     case error = "ERROR"
 }
 
+/// Một mẫu của luồng nhịp tim liên tục (`WearableDevice.heartRateStream`), cùng nghĩa với `HeartRateSample` Android.
+/// `bpm` nil = có gói nhưng chưa đo được (chưa đeo); `rrMs` khoảng RR (ms) nếu thiết bị gửi; `contact` nil = không báo.
+public struct HeartRateSample: Sendable, Equatable {
+    public var bpm: Int?
+    public var rrMs: [Int]
+    public var contact: Bool?
+    public var timestamp: Date
+
+    public init(bpm: Int?, rrMs: [Int] = [], contact: Bool? = nil, timestamp: Date = Date()) {
+        self.bpm = bpm
+        self.rrMs = rrMs
+        self.contact = contact
+        self.timestamp = timestamp
+    }
+}
+
 public struct Reading: Sendable, Equatable {
     public var capability: Capability
     public var status: ReadingStatus

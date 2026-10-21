@@ -40,6 +40,31 @@ object VeepooMeasure {
         }
     }
 
+    /** Kết quả một gói `D0` của luồng nhịp tim liên tục ([heartRateSample]). */
+    sealed class StreamPacket {
+        data class Sample(val sample: com.smartwear.core.HeartRateSample) : StreamPacket()
+
+        /** Vòng tay bận đo việc khác / đang sạc: luồng phải dừng. */
+        data class Failed(val message: String) : StreamPacket()
+    }
+
+    /**
+     * Một gói `D0` khi đo liên tục (cùng bố cục [heartRate], không đếm mẫu): 30–210 ⇒ mẫu có nhịp tim, bpm 1/2 ⇒ chưa đeo
+     * (`bpm` null, `contact` false), giá trị khác (0 lúc đang khởi động cảm biến) ⇒ null (bỏ qua).
+     */
+    fun heartRateSample(p: ByteArray, timestamp: Long = System.currentTimeMillis()): StreamPacket? {
+        if (p.op != 0xD0 || p.size < 2) return null
+        val bpm = u(p, 1)
+        val machine = if (p.size >= 6) u(p, 5) else 0
+        return when {
+            machine != 0 && machine != 2 && machine != 3 -> StreamPacket.Failed("Vòng tay đang bận đo việc khác ($machine)")
+            p.size >= 5 && u(p, 4) == 0xFD -> StreamPacket.Failed("Vòng tay đang sạc")
+            bpm == 1 || bpm == 2 -> StreamPacket.Sample(com.smartwear.core.HeartRateSample(null, contact = false, timestamp = timestamp))
+            bpm in 30..210 -> StreamPacket.Sample(com.smartwear.core.HeartRateSample(bpm, contact = true, timestamp = timestamp))
+            else -> null
+        }
+    }
+
     /**
      * SpO2 `80 chức-năng máy giá-trị đang-hiệu-chuẩn tiến-độ …` (`jf/f2.java:126-189`). Máy: 10 pin yếu, 11 xong, 12 không đeo;
      * byte 3 = %; byte 4 = 1/2 ⇒ đang hiệu chuẩn (byte 5 = tiến độ). Gói 20 byte có byte 6 = 6 ⇒ byte 7 = nhịp tim kèm theo.

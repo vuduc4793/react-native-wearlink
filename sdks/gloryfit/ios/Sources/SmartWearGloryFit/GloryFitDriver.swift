@@ -567,6 +567,74 @@ public final class GloryFitDevice: WearableDevice {
         }
     }
 
+    // MARK: - Nhịp tim liên tục
+
+    override public var supportsHeartRateStream: Bool { measurableCapabilities.contains(.heartRate) }
+
+    /// Đo lặp như Android: (`F7 02` nếu HR 24h đang bật) → `D6 01` → mỗi vòng `E5 11`, nhận `E5 11 00 rr` giữa chừng (Y25 đẩy
+    /// khoảng mỗi giây khi đo trên đồng hồ; khi app ra lệnh **chưa kiểm**) tới khi đồng hồ tự kết thúc `E5 00 …` hoặc hết
+    /// `hrManualWindow` thì gửi `E5 00` lấy kết quả, rồi vòng mới. Không tạo bài tập trên đồng hồ. Huỷ ⇒ `E5 00`, bật lại HR 24h.
+    /// 3 vòng liền không có gói nào ⇒ lỗi.
+    override public func heartRateStream() -> AsyncThrowingStream<HeartRateSample, Error> {
+        guard supportsHeartRateStream else { return super.heartRateStream() }
+        return AsyncThrowingStream { continuation in
+            let paused = Box(false)
+            let last = Box(Date())
+            let ended = Box(false)
+            let token = subscribe { p in
+                guard let x = Ute.parseHeartRateStream(p) else { return }
+                last.value = Date()
+                continuation.yield(x)
+                if p.first == 0xE5, p.count >= 2, p[1] == 0x00 { ended.value = true }
+            }
+            let runner = Task { @MainActor [weak self] in
+                guard let self else { return continuation.finish() }
+                do {
+                    if self.features.heartRateByPush && self.settings.on("hr24.enabled") {
+                        try await self.writeCommand([0xF7, 0x02])
+                        paused.value = true
+                    }
+                    try await self.writeCommand([0xD6, 0x01])
+                    try await Task.sleep(nanoseconds: 1_500_000_000)
+                    var silentCycles = 0
+                    while !Task.isCancelled {
+                        let cycleStart = Date()
+                        ended.value = false
+                        try await self.writeCommand([0xE5, 0x11])
+                        while !ended.value, Date().timeIntervalSince(cycleStart) < Self.hrManualWindow {
+                            try await Task.sleep(nanoseconds: 250_000_000)
+                        }
+                        if !ended.value,
+                           let p = try? await self.request([0xE5, 0x00], timeout: 5, match: { $0.count >= 4 && $0[0] == 0xE5 && $0[1] == 0x00 }),
+                           let x = Ute.parseHeartRateStream(p) {
+                            last.value = Date()
+                            continuation.yield(x)
+                        }
+                        silentCycles = last.value >= cycleStart ? 0 : silentCycles + 1
+                        if silentCycles >= 3 { throw GloryFitError("Đồng hồ không gửi nhịp tim") }
+                        try await Task.sleep(nanoseconds: 300_000_000)
+                    }
+                } catch is CancellationError {
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { [weak self] _ in
+                Task { @MainActor in
+                    runner.cancel()
+                    guard let self else { return }
+                    self.unsubscribe(token)
+                    guard self.gatt.state == .connected else { return }
+                    try? await self.writeCommand([0xE5, 0x00])
+                    if paused.value {
+                        paused.value = false
+                        await self.configureHeartRate24h()
+                    }
+                }
+            }
+        }
+    }
+
     /// Phép đo trực tiếp: gửi `prepare` (nếu có) rồi `start`, nhận các gói có opcode trong `ops` (`parse` trả về
     /// Reading và cờ kết thúc). Khi luồng kết thúc chỉ gửi `stop` nếu thiết bị đã phản hồi phép đo này: tránh
     /// cắt ngang phép đo người dùng tự bấm trên đồng hồ khi đồng hồ bỏ qua lệnh của app.

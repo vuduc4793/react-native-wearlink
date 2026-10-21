@@ -63,6 +63,8 @@ Không cần khai báo thêm module Gradle: thư viện biên dịch kèm mã SD
   thoại (`READ_PHONE_STATE`, dịch vụ đọc thông báo, SMS, cuộc gọi) app tự khai báo khi dùng, xem
   [hướng dẫn §3](docs/huong-dan-su-dung.md#android).
 - App cập nhật JS qua OTA: kiểm `SmartWear.isAvailable` trước khi gọi (false khi binary chưa có module native).
+- App đã có foreground service riêng (vd vị trí lúc chạy bộ): gọi `setForegroundService(false)` trong lúc dịch vụ đó chạy để
+  chỉ còn một thông báo; kết nối BLE vẫn sống vì nằm trong tiến trình app. Xem [hướng dẫn §7](docs/huong-dan-su-dung.md#nhịp-tim-liên-tục-khi-chạy-từ-013).
 
 ## Dùng
 
@@ -79,7 +81,8 @@ const subs = [
 
 SmartWear.startScan(20);
 await SmartWear.connect(id);            // mặc định GIỮ kết nối: mất thì tự nối lại, cả lần mở app sau
-SmartWear.measure(id, 'HEART_RATE');    // kết quả qua onReading; stopMeasure để dừng
+SmartWear.measure(id, 'HEART_RATE');    // đo một lần, kết quả qua onReading; stopMeasure để dừng
+await SmartWear.startHeartRateStream(id); // nhịp tim liên tục khi chạy, qua onHeartRate (features.heartRateStream)
 const h = await SmartWear.syncHistory(id, 7);
 
 const controls = await SmartWear.getControls(id);    // mục cài đặt theo đúng tính năng của thiết bị

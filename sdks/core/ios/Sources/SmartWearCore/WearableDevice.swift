@@ -191,6 +191,16 @@ open class WearableDevice: Identifiable {
         throw GattError.operationFailed("Gửi vị trí", "thiết bị không hỗ trợ")
     }
 
+    // Nhịp tim liên tục. Mặc định không hỗ trợ.
+
+    /// Thiết bị phát nhịp tim liên tục (`heartRateStream`), vd khi ghi bài chạy bằng GPS điện thoại.
+    open var supportsHeartRateStream: Bool { false }
+    /// Luồng nhịp tim tới khi bị huỷ (huỷ thì driver gửi lệnh dừng). Khác `measure`: không tự kết thúc, không tạo bài tập
+    /// trên thiết bị. Mất kết nối thì luồng kết thúc / lỗi, bên gọi tự mở lại. Đừng chạy song song với `measure(.heartRate)`.
+    open func heartRateStream() -> AsyncThrowingStream<HeartRateSample, Error> {
+        AsyncThrowingStream { $0.finish(throwing: GattError.operationFailed("Nhịp tim liên tục", "thiết bị không hỗ trợ")) }
+    }
+
     // Alarms (báo thức). Mặc định không hỗ trợ.
 
     /// Thiết bị đọc / ghi được báo thức (`alarms`, `setAlarm`, `deleteAlarm`).

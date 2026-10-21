@@ -9,6 +9,8 @@ import com.smartwear.core.DeviceInfo
 import com.smartwear.core.DriverMatch
 import com.smartwear.core.GattConnection
 import com.smartwear.core.GattNotification
+import com.smartwear.core.HeartRateSample
+import com.smartwear.core.HeartRateStreaming
 import com.smartwear.core.Reading
 import com.smartwear.core.ReadingStatus
 import com.smartwear.core.ScannedDevice
@@ -60,18 +62,37 @@ object Gatt {
     val HEART_RATE: UUID = uuid16(0x180D)
     val HEART_RATE_MEASUREMENT: UUID = uuid16(0x2A37)
 
+    /** Giải mã nhịp tim của gói 2A37 ([parseHeartRateMeasurement]); null nếu gói hỏng hoặc nhịp tim = 0. */
+    fun parseHeartRate(value: ByteArray): Int? = parseHeartRateMeasurement(value)?.bpm
+
     /**
-     * Giải mã Heart Rate Measurement (2A37): byte 0 là flags, bit 0 = 1 thì nhịp tim là UInt16 LE,
-     * ngược lại là UInt8. Trả về null nếu gói quá ngắn.
+     * Giải mã Heart Rate Measurement (2A37, Bluetooth SIG): byte 0 là flags. Bit 0: nhịp tim UInt16 LE (1) hay UInt8 (0);
+     * bit 2 = có báo tiếp xúc da, khi đó bit 1 = đang chạm; bit 3 = có Energy Expended (UInt16, bỏ qua); bit 4 = có RR,
+     * mỗi RR là UInt16 LE đơn vị 1/1024 s (đổi ra ms, làm tròn). Nhịp tim 0 ⇒ `bpm` null (chưa đo được).
+     * Trả về null nếu gói quá ngắn.
      */
-    fun parseHeartRate(value: ByteArray): Int? {
+    fun parseHeartRateMeasurement(value: ByteArray, timestamp: Long = System.currentTimeMillis()): com.smartwear.core.HeartRateSample? {
         if (value.isEmpty()) return null
-        val flags = value[0].toInt()
-        return if (flags and 0x01 != 0) {
-            if (value.size < 3) null else (value[1].toInt() and 0xFF) or ((value[2].toInt() and 0xFF) shl 8)
+        fun u8(i: Int) = value[i].toInt() and 0xFF
+        val flags = u8(0)
+        var i = 1
+        val bpm = if (flags and 0x01 != 0) {
+            if (value.size < 3) return null
+            (u8(1) or (u8(2) shl 8)).also { i = 3 }
         } else {
-            if (value.size < 2) null else value[1].toInt() and 0xFF
+            if (value.size < 2) return null
+            u8(1).also { i = 2 }
         }
+        val contact = if (flags and 0x04 != 0) flags and 0x02 != 0 else null
+        if (flags and 0x08 != 0) i += 2
+        val rr = mutableListOf<Int>()
+        if (flags and 0x10 != 0) {
+            while (i + 1 < value.size) {
+                rr += Math.round((u8(i) or (u8(i + 1) shl 8)) * 1000.0 / 1024.0).toInt()
+                i += 2
+            }
+        }
+        return com.smartwear.core.HeartRateSample(bpm.takeIf { it > 0 }, rr, contact, timestamp)
     }
 }
 
@@ -79,13 +100,16 @@ class StandardDevice(
     context: Context,
     scanned: ScannedDevice,
     model: String,
-) : BaseWearableDevice(scanned.address, scanned.name ?: model, StandardDriver) {
+) : BaseWearableDevice(scanned.address, scanned.name ?: model, StandardDriver), HeartRateStreaming {
 
     private val gatt = GattConnection(context.applicationContext, scanned.device)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Volatile
     private var heartRateListener: ((Int) -> Unit)? = null
+
+    @Volatile
+    private var streamListener: ((HeartRateSample) -> Unit)? = null
 
     init {
         _info.value = DeviceInfo(model = model, extra = mapOf("Driver" to "Bluetooth chuẩn (sdks/standard)", "Địa chỉ" to id))
@@ -163,11 +187,26 @@ class StandardDevice(
             heartRateListener = { bpm -> trySend(Reading(capability, ReadingStatus.OK, value = bpm.toDouble())) }
             gatt.enableNotifications(Gatt.HEART_RATE, Gatt.HEART_RATE_MEASUREMENT)
             awaitClose { heartRateListener = null }
-        }.onCompletion {
-            withContext(NonCancellable) {
-                runCatching {
-                    if (state.value == ConnectionState.CONNECTED) gatt.disableNotifications(Gatt.HEART_RATE, Gatt.HEART_RATE_MEASUREMENT)
-                }
+        }.onCompletion { disableHeartRateIfIdle() }
+    }
+
+    override val supportsHeartRateStream: Boolean get() = Capability.HEART_RATE in measurable.value
+
+    /** Mỗi gói 2A37 một mẫu (thường 1 s/lần), kèm RR và tiếp xúc da nếu dây đo gửi. */
+    override fun heartRateStream(): Flow<HeartRateSample> {
+        if (!supportsHeartRateStream) throw UnsupportedOperationException("Thiết bị không có dịch vụ nhịp tim 180D")
+        return callbackFlow {
+            streamListener = { trySend(it) }
+            gatt.enableNotifications(Gatt.HEART_RATE, Gatt.HEART_RATE_MEASUREMENT)
+            awaitClose { streamListener = null }
+        }.onCompletion { disableHeartRateIfIdle() }
+    }
+
+    /** Tắt notify 2A37 khi cả phép đo lẫn luồng nhịp tim đều đã dừng. */
+    private suspend fun disableHeartRateIfIdle() = withContext(NonCancellable) {
+        runCatching {
+            if (heartRateListener == null && streamListener == null && state.value == ConnectionState.CONNECTED) {
+                gatt.disableNotifications(Gatt.HEART_RATE, Gatt.HEART_RATE_MEASUREMENT)
             }
         }
     }
@@ -176,7 +215,10 @@ class StandardDevice(
         onPacketReceived(n.value, note = noteFor(n))
         when (n.characteristic) {
             Gatt.BATTERY_LEVEL -> if (n.value.isNotEmpty()) _battery.value = n.value[0].toInt() and 0xFF
-            Gatt.HEART_RATE_MEASUREMENT -> Gatt.parseHeartRate(n.value)?.let { heartRateListener?.invoke(it) }
+            Gatt.HEART_RATE_MEASUREMENT -> Gatt.parseHeartRateMeasurement(n.value)?.let { sample ->
+                sample.bpm?.let { heartRateListener?.invoke(it) }
+                streamListener?.invoke(sample)
+            }
         }
     }
 

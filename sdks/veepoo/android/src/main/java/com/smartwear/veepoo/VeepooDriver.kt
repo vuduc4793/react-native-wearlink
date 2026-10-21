@@ -12,6 +12,8 @@ import com.smartwear.core.DeviceControl
 import com.smartwear.core.DeviceEvent
 import com.smartwear.core.DeviceEvents
 import com.smartwear.core.FirmwareUpdatable
+import com.smartwear.core.HeartRateSample
+import com.smartwear.core.HeartRateStreaming
 import com.smartwear.core.MusicCommand
 import com.smartwear.core.MusicRemote
 import com.smartwear.core.MusicState
@@ -106,7 +108,7 @@ class VeepooDevice(
     private val model: String,
 ) : BaseWearableDevice(scanned.address, Veepoo.cleanName(scanned.name).ifEmpty { model }, VeepooDriver), ConfigurableDevice,
     NotificationDisplay, CallDisplay, MusicRemote, RemoteCameraDevice, ContactsSync, WeatherDisplay, WorkoutRemote, WatchFaceManager,
-    FirmwareUpdatable, DeviceEvents, AlarmClock {
+    FirmwareUpdatable, DeviceEvents, AlarmClock, HeartRateStreaming {
 
     private val appContext = context.applicationContext
     private val gatt = GattConnection(appContext, scanned.device)
@@ -409,6 +411,50 @@ class VeepooDevice(
         }.onCompletion {
             withContext(NonCancellable) { runCatching { if (state.value == ConnectionState.CONNECTED) writeCommand(stop) } }
         }
+
+    // ---------- Nhịp tim liên tục ----------
+
+    override val supportsHeartRateStream: Boolean get() = Capability.HEART_RATE in measurable.value
+
+    /**
+     * `D0 01` rồi nhận mọi gói `D0` (vòng tay đo liên tục tới khi app gửi `D0 00`, như phép đo [measureImpl] nhưng không dừng sau
+     * [VeepooMeasure.HR_SAMPLES] giá trị). Im lặng quá [MEASURE_IDLE_MS] thì gửi lại `D0 01`; im lặng lần nữa ⇒ lỗi.
+     * Vòng tay bận / đang sạc ⇒ lỗi. Huỷ thì gửi `D0 00`.
+     */
+    override fun heartRateStream(): Flow<HeartRateSample> {
+        if (!supportsHeartRateStream) throw UnsupportedOperationException("Vòng tay không đo nhịp tim")
+        val start = Veepoo.padded(20, 0xD0, 0x01)
+        return channelFlow {
+            var last = System.currentTimeMillis()
+            launch(start = CoroutineStart.UNDISPATCHED) {
+                events.collect { p ->
+                    if (p.op != 0xD0) return@collect
+                    last = System.currentTimeMillis()
+                    when (val r = VeepooMeasure.heartRateSample(p)) {
+                        is VeepooMeasure.StreamPacket.Sample -> send(r.sample)
+                        is VeepooMeasure.StreamPacket.Failed -> throw IllegalStateException(r.message)
+                        null -> {}
+                    }
+                }
+            }
+            writeCommand(start)
+            // Thời điểm gửi lại `D0 01` gần nhất; có gói sau đó thì lại được phép gửi lại lần nữa. Bộ nghe tự huỷ cùng flow.
+            var restartedAt: Long? = null
+            while (true) {
+                delay(1_000)
+                val now = System.currentTimeMillis()
+                if (restartedAt != null && last > restartedAt!!) restartedAt = null
+                if (now - last <= MEASURE_IDLE_MS) continue
+                if (restartedAt != null) throw IllegalStateException("Vòng tay không gửi nhịp tim")
+                restartedAt = now
+                last = now
+                SmartWearLog.w("[$name] luồng nhịp tim im lặng, gửi lại D0 01")
+                writeCommand(start)
+            }
+        }.onCompletion {
+            withContext(NonCancellable) { runCatching { if (state.value == ConnectionState.CONNECTED) writeCommand(Veepoo.bytes(0xD0, 0x00)) } }
+        }
+    }
 
     // ---------- Cài đặt (VeepooControls) ----------
 

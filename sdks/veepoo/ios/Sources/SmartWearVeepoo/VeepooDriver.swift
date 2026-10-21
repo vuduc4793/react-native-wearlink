@@ -391,6 +391,55 @@ public final class VeepooDevice: WearableDevice {
         }
     }
 
+    // MARK: - Nhịp tim liên tục
+
+    override public var supportsHeartRateStream: Bool { capabilities.contains(.heartRate) }
+
+    /// `D0 01` rồi nhận mọi gói `D0` (vòng tay đo tới khi app gửi `D0 00`), như Android. Im lặng quá `measureIdle` thì gửi lại
+    /// `D0 01`; im lặng lần nữa ⇒ lỗi. Vòng tay bận / đang sạc ⇒ lỗi. Huỷ thì gửi `D0 00`.
+    override public func heartRateStream() -> AsyncThrowingStream<HeartRateSample, Error> {
+        guard supportsHeartRateStream else { return super.heartRateStream() }
+        return AsyncThrowingStream { continuation in
+            let last = Box(Date())
+            let token = subscribe { p in
+                guard p.first == 0xD0 else { return }
+                last.value = Date()
+                switch VeepooMeasure.heartRateSample(p) {
+                case .sample(let x)?: continuation.yield(x)
+                case .failed(let message)?: continuation.finish(throwing: VeepooError(message))
+                case nil: break
+                }
+            }
+            let runner = Task { @MainActor [weak self] in
+                do {
+                    try await self?.writeCommand(VeepooMeasure.heartRateStart)
+                    var restartedAt: Date?
+                    while !Task.isCancelled {
+                        try await Task.sleep(nanoseconds: 1_000_000_000)
+                        let now = Date()
+                        if let r = restartedAt, last.value > r { restartedAt = nil }
+                        guard now.timeIntervalSince(last.value) > Self.measureIdle else { continue }
+                        if restartedAt != nil { throw VeepooError("Vòng tay không gửi nhịp tim") }
+                        restartedAt = now
+                        last.value = now
+                        try await self?.writeCommand(VeepooMeasure.heartRateStart)
+                    }
+                } catch is CancellationError {
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { [weak self] _ in
+                Task { @MainActor in
+                    runner.cancel()
+                    guard let self else { return }
+                    self.unsubscribe(token)
+                    if self.gatt.state == .connected { try? await self.writeCommand(VeepooMeasure.heartRateStop) }
+                }
+            }
+        }
+    }
+
     // MARK: - Lịch sử
 
     override public var supportsHistory: Bool { true }

@@ -2,7 +2,7 @@ import type { EventSubscription } from 'react-native';
 import NativeOrNull, { type Spec } from './NativeSmartWear';
 import type {
   Alarm, CallBluetoothState, Capability, Contact, ControlValue, Device, DeviceControl, DeviceEventName, DeviceHistory,
-  DiscoveredDevice, FirmwareCheck, LocationRequest, MusicCommand, MusicState,
+  DiscoveredDevice, FirmwareCheck, HeartRateEvent, LocationRequest, MusicCommand, MusicState,
   NotificationApp, PhoneLinkConfig, PhoneLocation, Reading, RemoteCameraEvent, ScanState, SmsReplyConfig,
   SmsReplyRequest, SportType, SyncProgress, TransferProgress, WatchFaceInfo, WatchFaceSlot, WeatherCondition,
   WatchFaceImageStyle, WeatherForecast, WorkoutEvent,
@@ -162,6 +162,19 @@ export const SmartWear = {
   /** Thiết bị xin vị trí điện thoại (`start`) hoặc thôi xin. Khi đang xin, app gọi `sendLocation` định kỳ (~1 s). */
   onLocationRequest: (cb: (e: LocationRequest) => void) => on('locationRequest', cb),
   sendLocation: (id: string, location: PhoneLocation) => call('sendLocation', id, location),
+
+  // ---------- Nhịp tim liên tục ----------
+
+  /**
+   * Bắt đầu luồng nhịp tim liên tục (vd khi ghi bài chạy bằng GPS điện thoại), kết quả qua `onHeartRate`. Không tạo bài tập trên
+   * thiết bị. Gọi được khi chưa kết nối: thư viện chờ kết nối rồi mới mở. Giữ tới `stopHeartRateStream`, tự mở lại khi nối lại.
+   * Lỗi `unsupported` nếu thiết bị đang kết nối mà không có (`features.heartRateStream`). Đừng gọi `measure(id, 'HEART_RATE')`
+   * trong lúc stream.
+   */
+  startHeartRateStream: (id: string) => call('startHeartRateStream', id),
+  stopHeartRateStream: (id: string) => call('stopHeartRateStream', id),
+  /** Mẫu nhịp tim (tối đa ~1 mẫu/giây), mất kết nối, lỗi. Xem `HeartRateEvent`. */
+  onHeartRate: (cb: (e: HeartRateEvent) => void) => on('heartRate', cb),
 
   // ---------- Báo thức ----------
 

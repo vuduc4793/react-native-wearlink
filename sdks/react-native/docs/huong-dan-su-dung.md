@@ -238,6 +238,51 @@ SmartWear.measure(id, 'BLOOD_LIPIDS');
 `BODY_COMPOSITION`: `value` là % mỡ. `extra` có `bmi`, `bodyFatRate`, `muscleMass`, `basalMetabolicRate`… (xem `Reading.extra` trong `types.ts`).
 Kết quả thành phần cơ thể dựa trên hồ sơ người dùng (chiều cao, cân nặng, tuổi, giới). Đặt hồ sơ trước khi đo: `setControl(id, 'profile.height' | 'profile.weight' | 'profile.age' | 'profile.gender', …)`.
 
+### Nhịp tim liên tục khi chạy (từ 0.1.3)
+
+`measure(id, 'HEART_RATE')` đo **một lần**. Khi ghi bài chạy bằng GPS điện thoại (như Strava ghép dây đo nhịp tim), dùng luồng liên tục:
+
+```ts
+const devices = await SmartWear.getDevices();
+const hr = devices.find(d => d.state === 'CONNECTED' && d.features.heartRateStream);
+
+const sub = SmartWear.onHeartRate(e => {
+  if (e.deviceId !== hr.id) return;
+  if (!e.connected) return markGap(e.t);              // mất kết nối: bắt đầu khoảng trống, thư viện tự nối lại
+  if (e.error === 'unsupported') return hideHeartRate();
+  if (e.bpm == null) return showHint(e.contact === false ? 'Đeo sát cổ tay' : 'Đang đo…');
+  addSample(e.t, e.bpm, e.rrMs);                     // tối đa ~1 mẫu/giây
+});
+await SmartWear.startHeartRateStream(hr.id);         // khi bấm "Bắt đầu chạy"
+// …
+await SmartWear.stopHeartRateStream(hr.id);          // khi kết thúc / huỷ buổi chạy
+sub.remove();
+```
+
+- Lưu nhịp tim thành bảng riêng theo `t` (giờ điện thoại lúc nhận), ghép với lộ trình theo thời gian. Quá **5 giây** không có
+  mẫu thì coi giá trị đang hiện là cũ và đánh dấu khoảng trống.
+- Gọi được trước khi thiết bị kết nối xong: thư viện chờ, rồi tự mở lại luồng sau mỗi lần nối lại cho tới `stopHeartRateStream`.
+- Không tạo bài tập trên đồng hồ / vòng (không dùng `startWorkout`), nên không bị trùng buổi tập khi đồng bộ lịch sử.
+- Đừng gọi `measure(id, 'HEART_RATE')` trong lúc stream. Y25 còn đẩy thêm giá trị qua `onReading` (HEART_RATE) trong lúc stream: bỏ qua.
+
+| Thiết bị | Cách lấy | Tần suất | Đã kiểm trên thiết bị thật |
+|---|---|---|---|
+| Dây đo / đồng hồ phát nhịp tim chuẩn 0x180D (Polar, Coospo, Magene, Garmin "Broadcast HR"…) | notify 0x2A37, có RR và tiếp xúc da nếu dây gửi | ~1 mẫu/giây | Chưa (đã test bộ giải mã) |
+| GE54 (`veepoo`) | lệnh đo nhịp tim `D0 01` chạy liên tục tới khi dừng | ~1 mẫu/giây (theo vòng) | Chưa |
+| Y25 (`gloryfit`) | đo lặp `E5 11` → `E5 00`, tạm tắt HR 24h trong lúc stream, bật lại khi dừng | ít nhất 1 mẫu/25 s; nếu đồng hồ đẩy giá trị giữa chừng thì ~1/giây | Chưa |
+| R09 (`qring`) | | | Không hỗ trợ (`unsupported`) |
+
+Màn ghép thiết bị đo nhịp tim lúc bắt đầu chạy: lọc kết quả quét bằng `d.heartRateService || d.driver === 'gloryfit' || d.driver === 'veepoo'`.
+
+**Android, khi app đã có foreground service riêng** (vd dịch vụ vị trí lúc chạy): kết nối BLE nằm trong tiến trình app, dịch vụ
+`KeepConnectedService` của thư viện chỉ giữ tiến trình sống ở nền. Nếu dịch vụ của app đang chạy thì gọi `setForegroundService(false)`
+để chỉ còn một thông báo, kết nối vẫn sống. Khi app tắt dịch vụ của mình (kết thúc buổi chạy) mà vẫn muốn giữ kết nối ở nền, gọi
+lại `setForegroundService(true)`.
+
+**iOS:** app chạy nền nhờ chế độ nền `location` lúc ghi GPS, nên luồng nhịp tim vẫn chạy. Thư viện có khôi phục trạng thái
+CoreBluetooth (`bluetooth-central`): iOS có thể mở lại app ở nền để nối lại thiết bị đang giữ, nhưng luồng nhịp tim **không tự mở
+lại** sau khi app bị hệ thống huỷ; JS phải gọi `start()` và `startHeartRateStream` lại. Người dùng vuốt tắt app thì iOS không mở lại.
+
 ## 8. Lịch sử
 
 ```ts

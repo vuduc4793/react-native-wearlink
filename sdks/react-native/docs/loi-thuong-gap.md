@@ -54,6 +54,11 @@ Không thấy lỗi của bạn ở đây thì [báo lỗi](bao-loi.md).
 | GE54 nhiệt độ đợi lâu | Bình thường: vòng đo khoảng 1 phút, trong lúc đó `MEASURING` | Hiện tiến độ, đừng huỷ sớm |
 | Huyết áp lệch hẳn so với máy đo | Có thể đã bị ghi hiệu chuẩn | Xem control hiệu chuẩn trong `getControls`. Chỉ người dùng tự đặt, app không tự ghi |
 | Số đo của lần trước vẫn chạy khi rời màn | Không gọi `stopMeasure` | Gọi `stopMeasure` khi unmount |
+| Muốn nhịp tim liên tục khi chạy nhưng `measure` chỉ trả một giá trị | `measure` là đo một lần | Dùng `startHeartRateStream` + `onHeartRate` (từ 0.1.3, [hướng dẫn §7](huong-dan-su-dung.md#nhịp-tim-liên-tục-khi-chạy-từ-013)) |
+| `startHeartRateStream` lỗi `unsupported` | Thiết bị đang kết nối nhưng không có nhịp tim liên tục (R09, thiết bị chuẩn không có 0x180D) | Kiểm `features.heartRateStream` trước |
+| `onHeartRate` có mẫu `connected: false` | Mất kết nối giữa buổi | Đánh dấu khoảng trống nhịp tim. Thư viện tự nối lại và mở lại luồng, không cần gọi lại |
+| Y25: nhịp tim khi chạy thưa (khoảng 25 s một giá trị) | Y25 chỉ đo theo lệnh từng lần | Bình thường với Y25. Cần ~1 giá trị/giây thì dùng dây đo nhịp tim chuẩn |
+| Android: hai thông báo thường trực lúc chạy (dịch vụ vị trí của app + giữ kết nối của thư viện) | Mỗi bên một foreground service | Trong lúc dịch vụ của app chạy, gọi `setForegroundService(false)`; xong buổi chạy gọi lại `true` nếu cần giữ kết nối nền |
 
 ## E. Lịch sử và số liệu
 

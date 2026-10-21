@@ -32,6 +32,7 @@ import com.smartwear.core.Contact
 import com.smartwear.core.ContactsSync
 import com.smartwear.core.DeviceEvents
 import com.smartwear.core.FirmwareUpdatable
+import com.smartwear.core.HeartRateStreaming
 import com.smartwear.core.MusicRemote
 import com.smartwear.core.NotificationDisplay
 import com.smartwear.core.RemoteCameraDevice
@@ -69,7 +70,7 @@ class SmartWearModule(reactContext: ReactApplicationContext) : NativeSmartWearSp
     private var publishJob: Job? = null
     private var lastScanState: Map<String, Any?>? = null
     private val invoker by lazy {
-        SmartWearInvoke(reactApplicationContext, manager, { phoneLink(reactApplicationContext) }, ::event, ::historyMap)
+        SmartWearInvoke(reactApplicationContext, manager, { phoneLink(reactApplicationContext) }, ::event, ::historyMap, scope)
     }
 
     private val manager: DeviceManager get() = shared(reactApplicationContext)
@@ -401,6 +402,8 @@ class SmartWearModule(reactContext: ReactApplicationContext) : NativeSmartWearSp
             pushMap(Arguments.createMap().apply {
                 putString("id", e.scanned.address); putString("name", e.scanned.name); putString("driver", e.driver.id)
                 putString("model", e.match.model); putInt("rssi", e.scanned.rssi)
+                // Quảng bá dịch vụ nhịp tim chuẩn 180D (dây đo nhịp tim, đồng hồ phát nhịp tim): lọc ở màn ghép khi bắt đầu chạy.
+                putBoolean("heartRateService", com.smartwear.standard.Gatt.HEART_RATE in e.scanned.serviceUuids)
             })
         }
     }
@@ -464,6 +467,7 @@ class SmartWearModule(reactContext: ReactApplicationContext) : NativeSmartWearSp
             "remoteCamera" to ((d as? RemoteCameraDevice)?.supportsRemoteCamera == true),
             "firmwareUpdate" to ((d as? FirmwareUpdatable)?.supportsFirmwareUpdate == true),
             "alarms" to ((d as? AlarmClock)?.supportsAlarms == true),
+            "heartRateStream" to ((d as? HeartRateStreaming)?.supportsHeartRateStream == true),
             "maxAlarms" to ((d as? AlarmClock)?.takeIf { it.supportsAlarms }?.maxAlarms ?: 0),
         ),
     )

@@ -51,6 +51,9 @@ export interface DiscoveredDevice {
   driver: string;
   model: string | null;
   rssi: number;
+  /** Quảng bá dịch vụ nhịp tim chuẩn 0x180D (dây đo nhịp tim, đồng hồ đang phát nhịp tim). Y25 / GE54 không quảng bá:
+   *  nhận theo `driver` ('gloryfit', 'veepoo'). */
+  heartRateService: boolean;
 }
 
 export type ReadingStatus = 'MEASURING' | 'OK' | 'NOT_WORN' | 'ERROR';
@@ -199,6 +202,26 @@ export interface DeviceFeatures {
   alarms: boolean;
   /** Số báo thức tối đa (0 = không có). */
   maxAlarms: number;
+  /** Nhịp tim liên tục (`startHeartRateStream`). Chỉ đúng khi đã kết nối. */
+  heartRateStream: boolean;
+}
+
+/**
+ * Một mẫu của luồng nhịp tim liên tục (`onHeartRate`). `t` ms epoch lúc điện thoại nhận.
+ * - `bpm` null + `connected: false`: vừa mất kết nối ⇒ bắt đầu khoảng trống nhịp tim (thư viện tự nối lại và mở lại luồng).
+ * - `bpm` null + `contact: false`: thiết bị chưa đeo / cảm biến không chạm da.
+ * - `error` khác null: luồng lỗi, thư viện thử lại sau 3 s; `'unsupported'` = thiết bị không có nhịp tim liên tục, luồng dừng.
+ * Quá 5 s không có mẫu thì coi giá trị đang hiện là cũ (khoảng trống).
+ */
+export interface HeartRateEvent {
+  deviceId: string;
+  bpm: number | null;
+  /** Khoảng RR (ms) từ dây đo chuẩn, gộp từ các gói kể từ mẫu trước. Rỗng nếu thiết bị không gửi. */
+  rrMs: number[];
+  contact: boolean | null;
+  t: number;
+  connected: boolean;
+  error: string | null;
 }
 
 /** Báo thức trên thiết bị. `repeatDays`: bit0 = thứ Hai … bit6 = Chủ nhật, 0 = một lần. `id` < 0 khi thêm mới. */

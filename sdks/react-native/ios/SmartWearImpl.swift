@@ -34,6 +34,8 @@ public final class SmartWearImpl: NSObject {
     /// Mốc thời gian số đo đã gửi JS theo (thiết bị, capability), để gửi số đo thiết bị tự đẩy đúng một lần.
     @MainActor private var sentReadings: [String: Date] = [:]
     @MainActor private var lastScanState: NSDictionary?
+    /// Luồng nhịp tim liên tục đang giữ (id thiết bị → task), xem `streamHeartRate`.
+    @MainActor private var heartRateTasks: [String: Task<Void, Never>] = [:]
 
     private func main(_ work: @escaping @MainActor () async -> Void) { Task { @MainActor in await work() } }
 
@@ -60,6 +62,8 @@ public final class SmartWearImpl: NSObject {
             ticker = nil
             measureTasks.values.forEach { $0.cancel() }
             measureTasks = [:]
+            heartRateTasks.values.forEach { $0.cancel() }
+            heartRateTasks = [:]
         }
     }
 
@@ -262,6 +266,63 @@ public final class SmartWearImpl: NSObject {
         emit?("onEvent", e)
     }
 
+    /// Luồng nhịp tim liên tục như `HeartRateStreams` Android: chờ kết nối, mở `heartRateStream`, gửi sự kiện `heartRate` (tối đa
+    /// một mẫu mỗi 0,75 s, RR của mẫu bị gộp vẫn giữ). Mất kết nối ⇒ một mẫu `connected: false`, nối lại thì mở lại; luồng lỗi ⇒
+    /// mẫu có `error`, thử lại sau 3 s. Chạy tới khi `stopHeartRateStream`.
+    @MainActor private func streamHeartRate(_ d: WearableDevice) async {
+        let id = d.id.uuidString
+        func send(_ x: HeartRateSample?, connected: Bool, error: String? = nil) {
+            event("heartRate", id, [
+                "bpm": x?.bpm ?? NSNull(), "rrMs": x?.rrMs ?? [], "contact": x?.contact ?? NSNull(),
+                "t": (x?.timestamp ?? Date()).timeIntervalSince1970 * 1000, "connected": connected, "error": error ?? NSNull(),
+            ])
+        }
+        func sleep(_ s: Double) async { try? await Task.sleep(nanoseconds: UInt64(s * 1_000_000_000)) }
+        while !Task.isCancelled {
+            while d.state != .connected {
+                await sleep(0.5)
+                if Task.isCancelled { return }
+            }
+            guard d.supportsHeartRateStream else { return send(nil, connected: true, error: "unsupported") }
+            let failure = Box<String?>(nil)
+            let done = Box(false)
+            let stream = d.heartRateStream()
+            let consumer = Task { @MainActor in
+                var lastEmit = Date.distantPast
+                var rr: [Int] = []
+                do {
+                    for try await x in stream {
+                        rr += x.rrMs
+                        if x.bpm != nil, x.timestamp.timeIntervalSince(lastEmit) < 0.75 { continue }
+                        lastEmit = x.timestamp
+                        var y = x
+                        y.rrMs = rr
+                        rr = []
+                        send(y, connected: true)
+                    }
+                } catch is CancellationError {
+                } catch {
+                    failure.value = error.localizedDescription
+                }
+                done.value = true
+            }
+            while !done.value {
+                if Task.isCancelled || d.state != .connected { consumer.cancel() }
+                await sleep(0.25)
+            }
+            if Task.isCancelled { return }
+            if d.state != .connected {
+                send(nil, connected: false)
+            } else if let f = failure.value {
+                SmartWearLog.w("[\(d.name)] luồng nhịp tim lỗi: \(f)")
+                send(nil, connected: true, error: f)
+                await sleep(3)
+            } else {
+                await sleep(1)
+            }
+        }
+    }
+
     /// Kết quả luôn là `{ value }` (TurboModule chỉ trả object).
     @objc public func invoke(_ method: String, deviceId: String, args: NSDictionary, resolve: @escaping Resolve, reject: @escaping Reject) {
         main { [self] in
@@ -395,6 +456,18 @@ public final class SmartWearImpl: NSObject {
             return nil
 
         case "checkFirmware", "updateFirmware", "cancelFirmwareUpdate": throw InvokeError.unsupported("Nạp firmware")
+        case "startHeartRateStream":
+            if d.state == .connected, !d.supportsHeartRateStream {
+                throw InvokeError(code: "unsupported", message: "Thiết bị không hỗ trợ nhịp tim liên tục")
+            }
+            let key = d.id.uuidString
+            heartRateTasks[key]?.cancel()
+            heartRateTasks[key] = Task { @MainActor [weak self] in await self?.streamHeartRate(d) }
+            return nil
+        case "stopHeartRateStream":
+            heartRateTasks.removeValue(forKey: d.id.uuidString)?.cancel()
+            return nil
+
         default: throw InvokeError(code: "unknown_method", message: "Không có lệnh \(method)")
         }
     }
@@ -459,7 +532,10 @@ public final class SmartWearImpl: NSObject {
 
     @MainActor private func discovered() -> [[String: Any]] {
         manager.discoveredSorted.map { d in
-            ["id": d.id.uuidString, "name": d.scanned.name ?? NSNull(), "driver": d.driverId, "model": d.match.model ?? NSNull(), "rssi": d.scanned.rssi]
+            [
+                "id": d.id.uuidString, "name": d.scanned.name ?? NSNull(), "driver": d.driverId, "model": d.match.model ?? NSNull(),
+                "rssi": d.scanned.rssi, "heartRateService": d.scanned.advertises(StandardGatt.heartRateService),
+            ]
         }
     }
 
@@ -551,7 +627,7 @@ public final class SmartWearImpl: NSObject {
             "callAudio": d.supportsCallAudio, "watchFace": d.supportsWatchFace, "watchFaceSlots": d.supportsWatchFaceSlots,
             "customWatchFace": false, "workoutControl": d.supportsWorkoutControl, "sportList": d.supportsSportList,
             "phoneLocation": d.supportsPhoneLocation, "remoteCamera": d.supportsRemoteCamera, "firmwareUpdate": false,
-            "alarms": d.supportsAlarms, "maxAlarms": d.maxAlarms,
+            "alarms": d.supportsAlarms, "maxAlarms": d.maxAlarms, "heartRateStream": d.supportsHeartRateStream,
         ]
     }
 

@@ -43,6 +43,8 @@ import com.smartwear.core.DeviceInfo
 import com.smartwear.core.DriverMatch
 import com.smartwear.core.GattConnection
 import com.smartwear.core.GattNotification
+import com.smartwear.core.HeartRateSample
+import com.smartwear.core.HeartRateStreaming
 import com.smartwear.core.HistoryPoint
 import com.smartwear.core.PairingPrompt
 import com.smartwear.core.RemoteCameraDevice
@@ -130,7 +132,7 @@ class GloryFitDevice(
     scanned: ScannedDevice,
     private val model: String,
 ) : BaseWearableDevice(scanned.address, scanned.name ?: model, GloryFitDriver), WatchFaceCustomizable, ConfigurableDevice, WeatherDisplay,
-    RemoteCameraDevice, NotificationDisplay, CallDisplay, MusicRemote, SmsQuickReply, ContactsSync, CallAudioLink, WorkoutRemote,
+    RemoteCameraDevice, NotificationDisplay, CallDisplay, MusicRemote, SmsQuickReply, ContactsSync, CallAudioLink, WorkoutRemote, HeartRateStreaming,
     FirmwareUpdatable, DeviceEvents {
 
     private val appContext = context.applicationContext
@@ -560,6 +562,60 @@ class GloryFitDevice(
                 runCatching {
                     if (state.value != ConnectionState.CONNECTED) return@runCatching
                     if (!stopped) writeCommand(bytes(0xE5, 0x00))
+                    if (paused) configureHeartRate24h()
+                }
+            }
+        }
+    }
+
+    // ---------- Nhịp tim liên tục ----------
+
+    override val supportsHeartRateStream: Boolean get() = Capability.HEART_RATE in measurable.value
+
+    /**
+     * Đo lặp: (`F7 02` tạm tắt HR 24h nếu đang bật) → `D6 01` → mỗi vòng `E5 11`, nhận `E5 11 00 rr` giữa chừng (Y25 đẩy khoảng
+     * mỗi giây khi đo trên đồng hồ, kiểm chứng 18:24; khi app ra lệnh **chưa kiểm**), tới khi đồng hồ tự kết thúc `E5 00 …`
+     * hoặc hết [HR_MANUAL_WINDOW_MS] thì gửi `E5 00` lấy kết quả (Y25 kiểm chứng 16/10), rồi vòng mới. Không tạo bài tập trên
+     * đồng hồ (không dùng `FD 11`). Huỷ ⇒ `E5 00` và bật lại HR 24h. Đồng hồ không trả lời 3 vòng liền ⇒ lỗi.
+     */
+    override fun heartRateStream(): Flow<HeartRateSample> {
+        if (!supportsHeartRateStream) throw UnsupportedOperationException("Đồng hồ không đo nhịp tim")
+        var paused = false
+        return channelFlow {
+            var last = System.currentTimeMillis()
+            val ended = Channel<Unit>(Channel.CONFLATED)
+            launch(start = CoroutineStart.UNDISPATCHED) {
+                events.collect { p ->
+                    val sample = Ute.parseHeartRateStream(p) ?: return@collect
+                    last = System.currentTimeMillis()
+                    send(sample)
+                    if (p.op == 0xE5 && Ute.u(p, 1) == 0x00) ended.trySend(Unit)
+                }
+            }
+            if (features.heartRateByPush && settings.on("hr24.enabled")) {
+                writeCommand(bytes(0xF7, 0x02))
+                paused = true
+            }
+            writeCommand(bytes(0xD6, 0x01))
+            delay(1_500)
+            var silentCycles = 0
+            while (true) {
+                val cycleStart = System.currentTimeMillis()
+                ended.tryReceive()
+                writeCommand(bytes(0xE5, 0x11))
+                if (withTimeoutOrNull(HR_MANUAL_WINDOW_MS) { ended.receive() } == null) {
+                    runCatching { request(bytes(0xE5, 0x00)) { it.op == 0xE5 && it.size >= 4 && Ute.u(it, 1) == 0x00 } }
+                        .getOrNull()?.let(Ute::parseHeartRateStream)?.let { last = System.currentTimeMillis(); send(it) }
+                }
+                silentCycles = if (last >= cycleStart) 0 else silentCycles + 1
+                if (silentCycles >= 3) throw GloryFitException("Đồng hồ không gửi nhịp tim")
+                delay(300)
+            }
+        }.onCompletion {
+            withContext(NonCancellable) {
+                runCatching {
+                    if (state.value != ConnectionState.CONNECTED) return@runCatching
+                    writeCommand(bytes(0xE5, 0x00))
                     if (paused) configureHeartRate24h()
                 }
             }

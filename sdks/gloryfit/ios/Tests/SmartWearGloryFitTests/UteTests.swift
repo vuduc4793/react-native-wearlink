@@ -143,6 +143,22 @@ final class UteTests: XCTestCase {
         XCTAssertNil(Ute.parseLiveHeartRate(hex("E5 11")))
     }
 
+    func testHeartRateStream() {
+        XCTAssertEqual(72, Ute.parseHeartRateStream(hex("E5 11 00 48"))?.bpm)
+        let done = Ute.parseHeartRateStream(hex("E5 00 00 52"))
+        XCTAssertEqual(82, done?.bpm)
+        XCTAssertEqual(true, done?.contact)
+        XCTAssertNil(Ute.parseHeartRateStream(hex("E5 11 00 00")))
+        let off = Ute.parseHeartRateStream(hex("E5 00 01 00"))
+        XCTAssertNotNil(off)
+        XCTAssertNil(off?.bpm)
+        XCTAssertEqual(false, off?.contact)
+        XCTAssertEqual(87, Ute.parseHeartRateStream(hex("F7 03 07 EA 0A 10 11 05 57"))?.bpm)
+        XCTAssertEqual(80, Ute.parseHeartRateStream(hex("F7 0B 07 EA 0A 10 11 05 50"))?.bpm)
+        XCTAssertNil(Ute.parseHeartRateStream(hex("E5 11")))
+        XCTAssertNil(Ute.parseHeartRateStream(hex("A2 50")))
+    }
+
     func testDialParamsY25AndHT43() throws {
         // doc 01 §11: Y25 và HT43 trả giống hệt nhau (466 × 466, 1 MB, level 2, 1 khe).
         let p = try XCTUnwrap(Ute.parseDialParams(hex("26 01 FF FF FF FF 01 D2 01 D2 00 00 10 00 00 02 01 00 00 00")))

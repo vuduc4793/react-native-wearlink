@@ -164,6 +164,54 @@ public final class StandardDevice: WearableDevice {
         }
     }
 
+    override public var supportsHeartRateStream: Bool { capabilities.contains(.heartRate) }
+
+    /// Mỗi gói 2A37 một mẫu (thường 1 s/lần), kèm RR và tiếp xúc da nếu dây đo gửi. Im lặng quá `heartRateIdleTimeout` ⇒ lỗi.
+    override public func heartRateStream() -> AsyncThrowingStream<HeartRateSample, Error> {
+        guard supportsHeartRateStream else { return super.heartRateStream() }
+        return AsyncThrowingStream { continuation in
+            let token = UUID()
+            let lastPacketAt = Box(Date())
+            heartRateHandlers[token] = { data in
+                guard let hr = HeartRateMeasurement.parse(data) else { return }
+                lastPacketAt.value = Date()
+                continuation.yield(HeartRateSample(
+                    bpm: hr.bpm > 0 ? hr.bpm : nil, rrMs: hr.rrIntervalsMs.map { Int($0.rounded()) }, contact: hr.sensorContact
+                ))
+            }
+            let starter = Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    try await self.gatt.setNotify(StandardGatt.heartRateService, StandardGatt.heartRateMeasurement)
+                    lastPacketAt.value = Date()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            let idle = heartRateIdleTimeout
+            let watchdog = Task { @MainActor in
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    if Date().timeIntervalSince(lastPacketAt.value) > idle {
+                        continuation.finish(throwing: GattError.operationFailed("Nhịp tim liên tục", "thiết bị ngừng gửi"))
+                        return
+                    }
+                }
+            }
+            continuation.onTermination = { [weak self] _ in
+                Task { @MainActor in
+                    starter.cancel()
+                    watchdog.cancel()
+                    guard let self else { return }
+                    self.heartRateHandlers[token] = nil
+                    if self.heartRateHandlers.isEmpty, self.gatt.state == .connected {
+                        try? await self.gatt.setNotify(StandardGatt.heartRateService, StandardGatt.heartRateMeasurement, enabled: false)
+                    }
+                }
+            }
+        }
+    }
+
     private func onNotification(_ uuid: CBUUID, _ data: Data) {
         switch uuid {
         case StandardGatt.batteryLevel:

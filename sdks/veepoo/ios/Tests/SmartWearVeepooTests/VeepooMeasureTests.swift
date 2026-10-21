@@ -25,6 +25,16 @@ final class VeepooMeasureTests: XCTestCase {
         }
     }
 
+    func testHeartRateStreamPackets() {
+        let t = Date(timeIntervalSince1970: 7)
+        XCTAssertNil(VeepooMeasure.heartRateSample(T.pad([0xD0, 0x00])))
+        XCTAssertEqual(.sample(HeartRateSample(bpm: 77, contact: true, timestamp: t)), VeepooMeasure.heartRateSample(T.pad([0xD0, 0x4D]), timestamp: t))
+        XCTAssertEqual(.sample(HeartRateSample(bpm: nil, contact: false, timestamp: t)), VeepooMeasure.heartRateSample(T.pad([0xD0, 0x01]), timestamp: t))
+        guard case .failed? = VeepooMeasure.heartRateSample(T.hex("D0 01 00 00 FD 00")) else { return XCTFail("đang sạc") }
+        guard case .failed? = VeepooMeasure.heartRateSample(T.hex("D0 48 00 00 00 05")) else { return XCTFail("bận") }
+        XCTAssertNil(VeepooMeasure.heartRateSample(T.hex("80 4D")))
+    }
+
     func testHeartRateErrors() {
         XCTAssertEqual(.notWorn, VeepooMeasure.heartRate()(T.pad([0xD0, 0x01]))?.0.status)
         let (busy, done) = VeepooMeasure.heartRate()(T.hex("D0 48 00 00 00 04"))!

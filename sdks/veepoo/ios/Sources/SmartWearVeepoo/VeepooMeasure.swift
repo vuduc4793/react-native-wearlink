@@ -71,6 +71,26 @@ public enum VeepooMeasure {
         }
     }
 
+    /// Kết quả một gói `D0` của luồng nhịp tim liên tục (`heartRateSample`).
+    public enum StreamPacket: Equatable {
+        case sample(HeartRateSample)
+        /// Vòng tay bận đo việc khác / đang sạc: luồng phải dừng.
+        case failed(String)
+    }
+
+    /// Một gói `D0` khi đo liên tục (bố cục như `heartRate`, không đếm mẫu): 30–210 ⇒ mẫu có nhịp tim, bpm 1/2 ⇒ chưa đeo
+    /// (`bpm` nil, `contact` false), giá trị khác (0 lúc khởi động cảm biến) ⇒ nil (bỏ qua). Như `heartRateSample` Android.
+    public static func heartRateSample(_ p: [UInt8], timestamp: Date = Date()) -> StreamPacket? {
+        guard p.count >= 2, p[0] == 0xD0 else { return nil }
+        let bpm = Int(p[1])
+        let machine = p.count >= 6 ? Int(p[5]) : 0
+        if machine != 0 && machine != 2 && machine != 3 { return .failed("Vòng tay đang bận đo việc khác (\(machine))") }
+        if p.count >= 5, p[4] == 0xFD { return .failed("Vòng tay đang sạc") }
+        if bpm == 1 || bpm == 2 { return .sample(HeartRateSample(bpm: nil, contact: false, timestamp: timestamp)) }
+        if (30...210).contains(bpm) { return .sample(HeartRateSample(bpm: bpm, contact: true, timestamp: timestamp)) }
+        return nil
+    }
+
     /// SpO2 `80 chức-năng máy giá-trị đang-hiệu-chuẩn tiến-độ …` (`jf/f2.java:126-189`). Máy: 10 pin yếu, 11 xong, 12 không
     /// đeo; byte 3 = %; byte 4 = 1/2 ⇒ đang hiệu chuẩn (byte 5 = tiến độ). Giá trị 1 = không đeo. Xong khi có `samples` giá trị
     /// 70–100 không trong lúc hiệu chuẩn, hoặc máy báo 11.

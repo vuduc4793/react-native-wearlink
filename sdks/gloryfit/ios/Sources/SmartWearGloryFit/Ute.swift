@@ -226,6 +226,19 @@ public enum Ute {
         return Reading(capability: .heartRate, status: .ok, value: Double(bpm), unit: "bpm")
     }
 
+    /// Mẫu của luồng nhịp tim liên tục, như `parseHeartRateStream` Android: `E5 fin st rr` với st = 0 và rr 30–220 ⇒ nhịp tim;
+    /// st ≠ 0 ⇒ chưa đeo (`bpm` nil, `contact` false); rr = 0 ⇒ nil. `F7 03`/`F7 0B` cũng là một mẫu, giờ là lúc nhận.
+    public static func parseHeartRateStream(_ p: [UInt8], timestamp: Date = Date()) -> HeartRateSample? {
+        if p.count >= 9, p[0] == 0xF7, p[1] == 0x03 || p[1] == 0x0B {
+            let bpm = u(p, 8)
+            return (30...220).contains(bpm) ? HeartRateSample(bpm: bpm, contact: true, timestamp: timestamp) : nil
+        }
+        guard p.count >= 4, p[0] == 0xE5 else { return nil }
+        if p[2] != 0 { return HeartRateSample(bpm: nil, contact: false, timestamp: timestamp) }
+        let bpm = u(p, 3)
+        return (30...220).contains(bpm) ? HeartRateSample(bpm: bpm, contact: true, timestamp: timestamp) : nil
+    }
+
     /// Ngày giờ địa phương; nil nếu không hợp lệ.
     static func date(_ calendar: Calendar, _ y: Int, _ mo: Int, _ d: Int, _ h: Int, _ mi: Int) -> Date? {
         guard (1...12).contains(mo), (1...31).contains(d) else { return nil }

@@ -1,6 +1,7 @@
 /**
  * App mẫu cho react-native-wearlink: quét, kết nối (giữ kết nối), đo, đồng bộ lịch sử, cài đặt, thời tiết, danh bạ,
- * tìm điện thoại, thông báo/cuộc gọi/nhạc/SMS (Android), mặt đồng hồ, bài tập, camera từ xa. Mọi thao tác đi qua API trong
+ * tìm điện thoại, thông báo/cuộc gọi/nhạc/SMS (Android), mặt đồng hồ, bài tập, camera từ xa, nhịp tim liên tục, đường GPS do
+ * đồng hồ ghi, AGPS. Mọi thao tác đi qua API trong
  * `react-native-wearlink`. Nút "Kiểm tra API" chạy lần lượt các lệnh không phá dữ liệu và ghi `SWTEST …` ra log
  * (Android: `adb logcat -s ReactNativeJS`).
  */
@@ -21,7 +22,9 @@ import SmartWear, {
   type Device,
   type DeviceControl,
   type DiscoveredDevice,
+  type HeartRateEvent,
   type Reading,
+  type Workout,
 } from 'react-native-wearlink';
 
 async function requestAndroidPermissions() {
@@ -102,7 +105,34 @@ async function selfTest(d: Device, log: (s: string) => void) {
       bloodPressureSample: bp, sleep: h.sleep.length, workouts: h.workouts.length, errors: h.errors,
     };
   });
+  await step('heartRateStream', f.heartRateStream, async () => {
+    // 15 s: đếm mẫu, lấy bpm cuối. Luồng không tạo bài tập trên thiết bị.
+    const got: number[] = [];
+    const sub = SmartWear.onHeartRate(e => e.deviceId === d.id && e.bpm != null && got.push(e.bpm));
+    try {
+      await SmartWear.startHeartRateStream(d.id);
+      await sleep(15000);
+    } finally {
+      sub.remove();
+      await SmartWear.stopHeartRateStream(d.id);
+    }
+    return {samples: got.length, last: got[got.length - 1] ?? null};
+  });
+  await step('getAgpsStatus', f.agps, () => SmartWear.getAgpsStatus(d.id));
+  await step('workoutTracks', d.supportsHistory, async () => {
+    const h = await SmartWear.getHistory(d.id);
+    return (h?.workouts ?? []).map(w => ({name: w.name, samples: w.samples?.length ?? 0, track: w.track?.length ?? 0}));
+  });
   out('done', 'OK');
+}
+
+/** Một dòng tóm tắt bài tập: môn, giờ bắt đầu, thời lượng, quãng đường, nhịp tim, số điểm GPS do đồng hồ ghi. */
+function workoutLine(w: Workout) {
+  const start = new Date(w.start).toLocaleString();
+  const km = w.distanceMeters ? ` · ${(w.distanceMeters / 1000).toFixed(2)} km` : '';
+  const hr = w.avgHeartRate ? ` · HR ${w.avgHeartRate}` : '';
+  const gps = w.track?.length ? ` · GPS ${w.track.length} điểm` : '';
+  return `${w.name} · ${start} · ${Math.round(w.activeSeconds / 60)} phút${km}${hr}${gps}`;
 }
 
 function Button({title, onPress, disabled}: {title: string; onPress: () => void; disabled?: boolean}) {
@@ -119,6 +149,9 @@ export default function App() {
   const [readings, setReadings] = useState<Record<string, Reading>>({});
   const [log, setLog] = useState<string[]>([]);
   const [controls, setControls] = useState<Record<string, DeviceControl[]>>({});
+  /** Mẫu nhịp tim mới nhất theo thiết bị; có khoá = luồng đang mở. */
+  const [hr, setHr] = useState<Record<string, HeartRateEvent | null>>({});
+  const [workouts, setWorkouts] = useState<Record<string, Workout[]>>({});
   const note = useCallback((s: string) => {
     if (s.startsWith('SWEVENT')) console.log(s);
     setLog(l => [`${new Date().toLocaleTimeString()} ${s}`, ...l].slice(0, 60));
@@ -148,6 +181,11 @@ export default function App() {
       SmartWear.onLocationRequest(e => note(`SWEVENT xin vị trí ${JSON.stringify(e)}`)),
       SmartWear.onTransferProgress(p => p.fraction >= 1 && note(`SWEVENT truyền ${p.what} xong`)),
       SmartWear.onReading(r => console.log(`SWEVENT reading ${r.capability} ${r.status} ${r.value ?? ''}`)),
+      SmartWear.onHeartRate(e => {
+        console.log(`SWEVENT heartRate ${e.bpm ?? '-'} connected=${e.connected} rr=${e.rrMs.length} ${e.error ?? ''}`);
+        setHr(m => (e.deviceId in m ? {...m, [e.deviceId]: e} : m));
+      }),
+      SmartWear.onAgpsRequest(e => note(`SWEVENT AGPS ${e.request}${e.handled ? ' (đã trả lời)' : ''}`)),
     ];
     return () => subs.forEach(s => s.remove());
   }, [note]);
@@ -211,12 +249,15 @@ export default function App() {
                       onPress={() =>
                         run(
                           `lịch sử ${d.name}`,
-                          SmartWear.syncHistory(d.id, 7).then(h => ({
+                          SmartWear.syncHistory(d.id, 7).then(h => {
+                            setWorkouts(m => ({...m, [d.id]: h.workouts}));
+                            return {
                             today: h.today,
                             series: Object.fromEntries(Object.entries(h.series).map(([k, v]) => [k, v?.length])),
                             sleep: h.sleep.length,
                             workouts: h.workouts.length,
-                          })),
+                            };
+                          }),
                         )
                       }
                     />
@@ -239,6 +280,28 @@ export default function App() {
                     <Button title="Kênh gọi" onPress={() => run('kênh gọi', SmartWear.getCallBluetoothState(d.id))} />
                   )}
                   <Button title="Kiểm tra API" onPress={() => selfTest(d, note)} />
+                  {d.features.heartRateStream && (
+                    d.id in hr ? (
+                      <Button
+                        title="Dừng nhịp tim"
+                        onPress={() => {
+                          setHr(({[d.id]: _, ...rest}) => rest);
+                          run('dừng nhịp tim', SmartWear.stopHeartRateStream(d.id));
+                        }}
+                      />
+                    ) : (
+                      <Button
+                        title="Nhịp tim liên tục"
+                        onPress={() => {
+                          setHr(m => ({...m, [d.id]: null}));
+                          run('nhịp tim liên tục', SmartWear.startHeartRateStream(d.id));
+                        }}
+                      />
+                    )
+                  )}
+                  {d.features.agps && (
+                    <Button title="AGPS" onPress={() => run('AGPS', SmartWear.getAgpsStatus(d.id))} />
+                  )}
                   {d.features.workoutControl && (
                     <Button
                       title="Bài tập 10 s"
@@ -257,6 +320,25 @@ export default function App() {
                     />
                   )}
                 </View>
+                {d.id in hr && (
+                  <View style={styles.hrBox}>
+                    <Text style={styles.hrValue}>{hr[d.id]?.bpm ?? '--'}</Text>
+                    <Text style={styles.sub}>
+                      bpm · {hr[d.id] == null ? 'đang mở luồng…' : hr[d.id]!.connected
+                        ? `${new Date(hr[d.id]!.t).toLocaleTimeString()}${hr[d.id]!.rrMs.length ? ` · RR ${hr[d.id]!.rrMs.join('/')} ms` : ''}`
+                        : 'mất kết nối, đang nối lại'}
+                      {hr[d.id]?.error ? ` · ${hr[d.id]!.error}` : ''}
+                    </Text>
+                  </View>
+                )}
+                {(workouts[d.id] ?? []).length > 0 && (
+                  <View style={{marginTop: 10}}>
+                    <Text style={styles.section}>Bài tập ({workouts[d.id].length})</Text>
+                    {workouts[d.id].slice(0, 10).map((w, i) => (
+                      <Text key={i} style={styles.sub}>{workoutLine(w)}</Text>
+                    ))}
+                  </View>
+                )}
                 {(controls[d.id] ?? []).map(c => (
                   <View key={c.id} style={styles.controlRow}>
                     <Text style={[styles.sub, {flex: 1}]}>
@@ -301,5 +383,8 @@ const styles = StyleSheet.create({
   controlRow: {flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8},
   button: {backgroundColor: 'white', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8},
   buttonText: {color: 'black', fontWeight: '600'},
+  section: {color: 'white', fontSize: 14, fontWeight: '600'},
+  hrBox: {flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 10},
+  hrValue: {color: '#ff453a', fontSize: 40, fontWeight: '700', fontVariant: ['tabular-nums']},
   log: {color: '#a1a1a6', fontSize: 12, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginTop: 4},
 });

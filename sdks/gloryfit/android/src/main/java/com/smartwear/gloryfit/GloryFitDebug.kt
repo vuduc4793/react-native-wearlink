@@ -17,4 +17,6 @@ object GloryFitDebug {
      * nhưng chưa kiểm hết trên Y25 nên mặc định tắt (giống bản iOS: có hàm dựng, chưa nối vào syncHistory).
      */
     @Volatile var syncSince: Boolean = false
+    /** In mọi gói `FD` của luồng đồng bộ bài tập (hex), để đối chiếu bản ghi có GPS với [UteWorkoutRecord]. */
+    @Volatile var workoutPackets: Boolean = false
 }

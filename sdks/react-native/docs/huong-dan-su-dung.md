@@ -301,6 +301,31 @@ const cached = await SmartWear.getHistory(id);  // kết quả lần đồng b�
 - `h.errors` không rỗng **không** có nghĩa là thất bại toàn bộ. Vẫn hiện phần đã có.
 - Thời gian luôn là ms từ 1970, theo giờ điện thoại. Thiết bị được đặt giờ theo điện thoại mỗi lần kết nối.
 
+### Chi tiết bài tập và đường GPS do đồng hồ ghi (từ 0.1.4)
+
+Bài tập ghi **trên đồng hồ** (người dùng bấm bắt đầu trên đồng hồ) có thêm chi tiết khi thiết bị gửi:
+
+```ts
+for (const w of h.workouts) {
+  w.samples;              // [{t, heartRate, paceSecondsPerKm, speedKmh, cadence, latitude, longitude}], mỗi w.sampleIntervalSeconds giây
+  w.track;                // [{t, latitude, longitude}]: đường đi GPS của đồng hồ, rỗng nếu đồng hồ không có GPS
+  w.heartRateZoneSeconds; // [khởi động, đốt mỡ, ưa khí, kỵ khí, tối đa] (giây) hoặc null
+  w.avgStrideCm;          // sải bước, cũng có maxStrideCm, minStrideCm
+}
+// Vẽ: <Polyline coordinates={w.track.map(p => ({latitude: p.latitude, longitude: p.longitude}))} />
+```
+
+| Thiết bị | `samples` / vùng HR | `track` (GPS) |
+|---|---|---|
+| HT43 (gloryfit) | có | có (đồng hồ có chip GPS) |
+| Y25 (gloryfit) | có | chỉ khi đồng hồ có GPS riêng: chưa xác nhận |
+| GE54, R09, dây HR | không | không |
+
+- Đây là đường GPS **đồng hồ tự ghi**, khác với chạy bằng GPS điện thoại (app tự ghi, xem báo cáo chạy bộ).
+- Các trường đều tuỳ chọn: bản native cũ hơn 0.1.4 không gửi. Viết `w.track ?? []`.
+- Bố cục gói đã giải mã theo mã app hãng, **chưa đối chiếu với bản ghi thật có GPS**. Thấy đường lệch hoặc rỗng dù đồng hồ có GPS
+  thì [báo lỗi](bao-loi.md) kèm log (app lab Android: `--ez workoutPackets true` in hex từng gói bài tập).
+
 ## 9. Cài đặt thiết bị
 
 Mọi cài đặt (nhắc ngồi, không làm phiền, đơn vị, hồ sơ, đo tự động, mục tiêu…) đi qua một danh sách chung, đúng với từng máy:

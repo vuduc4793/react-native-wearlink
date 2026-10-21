@@ -610,6 +610,17 @@ public final class SmartWearImpl: NSObject {
                     "steps": opt(w.steps), "calories": opt(w.calories), "distanceMeters": opt(w.distanceMeters),
                     "avgHeartRate": opt(w.avgHeartRate), "maxHeartRate": opt(w.maxHeartRate),
                     "minHeartRate": opt(w.minHeartRate), "paceSecondsPerKm": opt(w.paceSecondsPerKm),
+                    "sampleIntervalSeconds": opt(w.sampleIntervalSeconds),
+                    "heartRateZoneSeconds": w.heartRateZoneSeconds ?? NSNull(),
+                    "avgStrideCm": opt(w.avgStrideCm), "maxStrideCm": opt(w.maxStrideCm), "minStrideCm": opt(w.minStrideCm),
+                    "samples": w.samples.map { x in
+                        [
+                            "t": ms(x.time), "heartRate": opt(x.heartRate), "paceSecondsPerKm": opt(x.paceSecondsPerKm),
+                            "speedKmh": x.speedKmh ?? NSNull(), "cadence": opt(x.cadence),
+                            "latitude": x.latitude ?? NSNull(), "longitude": x.longitude ?? NSNull(),
+                        ] as [String: Any]
+                    },
+                    "track": w.track.map { ["t": ms($0.time), "latitude": $0.latitude ?? 0, "longitude": $0.longitude ?? 0] as [String: Any] },
                 ] as [String: Any]
             },
             "errors": h.errors,

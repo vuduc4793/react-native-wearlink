@@ -88,6 +88,8 @@ class MainActivity : ComponentActivity() {
         com.smartwear.gloryfit.GloryFitDebug.noRetry = intent.getBooleanExtra("faceNoRetry", false)
         // Đồng bộ lịch sử từ mốc thời gian (F4 0x2000), mặc định tắt: --ez syncSince true
         com.smartwear.gloryfit.GloryFitDebug.syncSince = intent.getBooleanExtra("syncSince", false)
+        // In hex mọi gói bài tập `FD` lúc đồng bộ (đối chiếu bản ghi có GPS): --ez workoutPackets true
+        com.smartwear.gloryfit.GloryFitDebug.workoutPackets = intent.getBooleanExtra("workoutPackets", false)
         // OTA: mặc định không tự cài mặt đồng hồ khi kết nối (tránh truyền file lớn song song với DFU).
         (application as SmartWearApp).watchFaces.paused = !intent.getBooleanExtra("faceAuto", action != "ota" && action != "otaProbe")
         fun matches(t: String, e: com.smartwear.core.ScanEntry) =

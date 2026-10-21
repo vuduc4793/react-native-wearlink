@@ -63,9 +63,13 @@ extension GloryFitDevice {
         }
 
         // Bài tập đa môn (chạy, đạp xe, yoga…). F5 0x040000: thời gian tập hiệu quả ở byte 17–19.
+        // F7 0x80 (b1.7 "GPS thể thao"): bản ghi có gói vùng nhịp tim / sải bước và chuỗi mẫu kèm toạ độ GPS.
         let endIsTimestamp = features.has(5, 0x040000)
+        let hasDetail = features.has(7, 0x0080)
         steps.append(HistoryStep("Bài tập") { [unowned self] in
-            workouts = Ute.parseWorkouts(try await self.workoutStream(), calendar: calendar, endIsTimestamp: endIsTimestamp)
+            workouts = Ute.parseWorkouts(
+                try await self.workoutStream(), calendar: calendar, endIsTimestamp: endIsTimestamp, hasDetail: hasDetail
+            )
         })
 
         let errors = await HistoryStep.runAll(steps, progress: progress)

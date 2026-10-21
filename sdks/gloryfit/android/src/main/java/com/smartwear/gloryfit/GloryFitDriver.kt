@@ -734,7 +734,10 @@ class GloryFitDevice(
             steps += Step("Huyết áp") { series[Capability.BLOOD_PRESSURE] = Ute.parseBloodPressure(historyStreamSince(cmd, since).packets, zone) }
         }
         // Bài tập đa môn (chạy, đạp xe, yoga…). F5 0x040000: giờ kết thúc dạng epoch + thời gian tập hiệu quả.
-        steps += Step("Bài tập") { workouts = Ute.parseWorkouts(streamWorkouts(since), zone, features.has(5, 0x040000)) }
+        // F7 0x80 (b1.7 "GPS thể thao"): bản ghi có gói vùng nhịp tim / sải bước và chuỗi mẫu kèm toạ độ GPS.
+        steps += Step("Bài tập") {
+            workouts = Ute.parseWorkouts(streamWorkouts(since), zone, features.has(5, 0x040000), hasDetail = features.has(7, 0x0080))
+        }
 
         steps.forEachIndexed { i, step ->
             progress(SyncProgress(step.label, i, steps.size))
@@ -1871,6 +1874,7 @@ class GloryFitDevice(
             while (true) {
                 val p = withTimeoutOrNull(idleMs) { channel.receive() } ?: break
                 packets += p
+                if (GloryFitDebug.workoutPackets) SmartWearLog.i("[$name] bài tập gói: ${p.toHex()}")
                 Ute.workoutCount(p)?.let { expected = it }
                 if (expected == 0) break
                 if (Ute.isWorkoutEnd(p) && ++done >= expected && expected > 0) break

@@ -43,7 +43,7 @@ object Ute {
 
     fun u(b: ByteArray, i: Int) = b[i].toInt() and 0xFF
     fun be16(b: ByteArray, i: Int) = (u(b, i) shl 8) or u(b, i + 1)
-    private fun be24(b: ByteArray, i: Int) = (u(b, i) shl 16) or (u(b, i + 1) shl 8) or u(b, i + 2)
+    internal fun be24(b: ByteArray, i: Int) = (u(b, i) shl 16) or (u(b, i + 1) shl 8) or u(b, i + 2)
 
     /**
      * Gói đặt giờ: `A3 YYYY MM DD hh mm ss` (8 byte, Y25/HT43 đã phản hồi, doc 01 §10).
@@ -304,15 +304,22 @@ object Ute {
      *   byte 13–16 là epoch giây kết thúc, 17–19 thời gian tập hiệu quả (giây); không thì 13–19 là ngày giờ kết thúc.
      * - gói số 1: bước (u24 @3), số lần (@6), kcal (@8), quãng đường km = b10 + b11/100, HR tb/max/min (@12–14),
      *   pace phút:giây (@15–16).
-     * - gói số ≥ 2: vùng nhịp tim / chuỗi nhịp tim (chưa dùng). `FD FD` kết thúc bài.
+     * - gói số ≥ 2: vùng nhịp tim, sải bước, chuỗi mẫu (HR, pace/tốc độ, nhịp bước, toạ độ GPS), xem [UteWorkoutRecord].
+     *   [hasDetail] = F7 `0x80` (gói 2, 3 là gói tổng hợp). `FD FD` kết thúc bài.
      */
-    fun parseWorkouts(packets: List<ByteArray>, zone: ZoneId, endIsTimestamp: Boolean): List<Workout> {
+    fun parseWorkouts(packets: List<ByteArray>, zone: ZoneId, endIsTimestamp: Boolean, hasDetail: Boolean = false): List<Workout> {
         val out = mutableListOf<Workout>()
         var cur: Workout? = null
-        fun flush() { cur?.let { out += it }; cur = null }
+        var interval: Int? = null
+        val detail = mutableListOf<ByteArray>()
+        fun flush() {
+            cur?.let { w -> out += runCatching { UteWorkoutRecord.withDetail(w, detail, interval, hasDetail) }.getOrDefault(w) }
+            cur = null; interval = null; detail.clear()
+        }
         for (p in packets) {
             if (p.isEmpty() || u(p, 0) != 0xFD || workoutCount(p) != null) continue
             if (isWorkoutEnd(p)) { flush(); continue }
+            if (p.size >= 3 && be16(p, 1) >= 2) { if (cur != null) detail += p; continue }
             if (p.size < 13) continue
             when (be16(p, 1)) {
                 0 -> {
@@ -336,6 +343,7 @@ object Ute {
                     cur = Workout(type, sportName(type), start, end, active)
                 }
                 1 -> cur = cur?.let { w ->
+                    interval = UteWorkoutRecord.intervalSeconds(p)
                     fun pos(v: Int) = v.takeIf { it > 0 }
                     val km = u(p, 10) + u(p, 11) / 100.0
                     val pace = if (p.size >= 17) u(p, 15) * 60 + u(p, 16) else 0

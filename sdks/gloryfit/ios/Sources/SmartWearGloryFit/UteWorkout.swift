@@ -19,15 +19,27 @@ extension Ute {
     /// - gói số 0: `FD 00 00 type rateCnt(2) YYYY MM DD hh mm ss` + kết thúc. `endIsTimestamp` (F5 `0x040000`):
     ///   byte 17–19 là thời gian tập hiệu quả (giây); không thì 13–19 là ngày giờ kết thúc.
     /// - gói số 1: bước (u24 @3), kcal (@8), quãng đường km = b10 + b11/100, HR tb/max/min (@12–14), pace (@15–16).
-    /// - gói số ≥ 2: vùng / chuỗi nhịp tim (chưa dùng). `FD FD` kết thúc bài.
-    public static func parseWorkouts(_ packets: [[UInt8]], calendar: Calendar = .current, endIsTimestamp: Bool) -> [Workout] {
+    /// - gói số ≥ 2: vùng nhịp tim, sải bước, chuỗi mẫu (HR, pace/tốc độ, nhịp bước, toạ độ GPS), xem `UteWorkoutRecord`.
+    ///   `hasDetail` = F7 `0x80` (gói 2, 3 là gói tổng hợp). `FD FD` kết thúc bài.
+    public static func parseWorkouts(
+        _ packets: [[UInt8]], calendar: Calendar = .current, endIsTimestamp: Bool, hasDetail: Bool = false
+    ) -> [Workout] {
         var out: [Workout] = []
         var cur: Workout?
-        func flush() { if let c = cur { out.append(c) }; cur = nil }
+        var interval: Int?
+        var detail: [[UInt8]] = []
+        func flush() {
+            if let c = cur { out.append(UteWorkoutRecord.withDetail(c, detail, interval: interval, hasDetail: hasDetail)) }
+            cur = nil; interval = nil; detail = []
+        }
         func positive(_ v: Int) -> Int? { v > 0 ? v : nil }
         for p in packets {
             guard !p.isEmpty, p[0] == 0xFD, workoutCount(p) == nil else { continue }
             if isWorkoutEnd(p) { flush(); continue }
+            if p.count >= 3, be16(p, 1) >= 2 {
+                if cur != nil { detail.append(p) }
+                continue
+            }
             guard p.count >= 13 else { continue }
             switch be16(p, 1) {
             case 0:
@@ -52,6 +64,7 @@ extension Ute {
                 cur = Workout(type: type, name: sportName(type), start: start, end: end, activeSeconds: active)
             case 1:
                 guard var w = cur else { continue }
+                interval = UteWorkoutRecord.intervalSeconds(p)
                 let km = Double(u(p, 10)) + Double(u(p, 11)) / 100
                 w.steps = positive(be24(p, 3))
                 w.calories = positive(be16(p, 8))

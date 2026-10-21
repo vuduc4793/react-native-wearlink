@@ -111,6 +111,37 @@ export interface Workout {
   minHeartRate: number | null;
   /** Pace trung bình, giây/km. */
   paceSecondsPerKm: number | null;
+  /** Khoảng giữa hai mẫu (giây). Từ 0.1.4. */
+  sampleIntervalSeconds?: number | null;
+  /** Thời gian ở 5 vùng nhịp tim (giây): khởi động, đốt mỡ, ưa khí, kỵ khí, tối đa. Từ 0.1.4. */
+  heartRateZoneSeconds?: number[] | null;
+  /** Sải bước TB / lớn nhất / nhỏ nhất (cm, theo app hãng). Từ 0.1.4. */
+  avgStrideCm?: number | null;
+  maxStrideCm?: number | null;
+  minStrideCm?: number | null;
+  /** Chuỗi mẫu theo thời gian do thiết bị ghi. Rỗng nếu thiết bị không gửi. Từ 0.1.4. */
+  samples?: WorkoutSample[];
+  /** Đường đi GPS do **đồng hồ** ghi (đồng hồ có GPS riêng, vd. HT43). Rỗng = không có GPS. Từ 0.1.4. */
+  track?: TrackPoint[];
+}
+export interface WorkoutSample {
+  /** epoch ms */
+  t: number;
+  heartRate: number | null;
+  /** Môn đi/chạy. */
+  paceSecondsPerKm: number | null;
+  /** Môn đạp xe. */
+  speedKmh: number | null;
+  /** Nhịp bước (bước/phút) hoặc nhịp đạp. */
+  cadence: number | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+export interface TrackPoint {
+  /** epoch ms */
+  t: number;
+  latitude: number;
+  longitude: number;
 }
 export interface DeviceHistory {
   days: number;

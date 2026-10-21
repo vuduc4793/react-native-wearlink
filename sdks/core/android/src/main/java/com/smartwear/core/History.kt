@@ -45,6 +45,34 @@ data class Workout(
     val minHeartRate: Int? = null,
     /** Pace trung bình, giây cho mỗi km. */
     val paceSecondsPerKm: Int? = null,
+    /** Chuỗi mẫu theo thời gian (nhịp tim, pace/tốc độ, nhịp bước, toạ độ GPS nếu đồng hồ có GPS). Rỗng = thiết bị không gửi. */
+    val samples: List<WorkoutSample> = emptyList(),
+    /** Khoảng cách giữa hai mẫu (giây) do thiết bị báo. */
+    val sampleIntervalSeconds: Int? = null,
+    /** Thời gian ở 5 vùng nhịp tim (giây): khởi động, đốt mỡ, sức bền ưa khí, sức bền kỵ khí, tối đa. */
+    val heartRateZoneSeconds: List<Int>? = null,
+    /** Sải bước trung bình / lớn nhất / nhỏ nhất (cm, theo app hãng; chưa đối chiếu thực địa). */
+    val avgStrideCm: Int? = null,
+    val maxStrideCm: Int? = null,
+    val minStrideCm: Int? = null,
+) {
+    /** Đường đi GPS: các mẫu có toạ độ, theo thời gian. Rỗng = thiết bị không có GPS hoặc bài không ghi GPS. */
+    val track: List<WorkoutSample> get() = samples.filter { it.latitude != null && it.longitude != null }
+}
+
+/**
+ * Một mẫu trong bài tập, tại [time] (epoch ms). Trường nào thiết bị không gửi thì null.
+ * [paceSecondsPerKm] cho môn đi/chạy, [speedKmh] cho môn đạp xe (tuỳ kiểu dữ liệu của thiết bị).
+ */
+data class WorkoutSample(
+    val time: Long,
+    val heartRate: Int? = null,
+    val paceSecondsPerKm: Int? = null,
+    val speedKmh: Double? = null,
+    /** Nhịp bước (bước/phút) hoặc nhịp đạp. */
+    val cadence: Int? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )
 
 data class ActivityTotals(val steps: Int, val calories: Int, val distanceMeters: Int, val activeMinutes: Int? = null)

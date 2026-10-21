@@ -80,18 +80,82 @@ public struct Workout: Sendable, Equatable, Codable, Identifiable {
     public var minHeartRate: Int?
     /// Pace trung bình, giây cho mỗi km.
     public var paceSecondsPerKm: Int?
+    /// Chuỗi mẫu theo thời gian (nhịp tim, pace/tốc độ, nhịp bước, toạ độ GPS nếu đồng hồ có GPS). Rỗng = thiết bị không gửi.
+    public var samples: [WorkoutSample]
+    /// Khoảng cách giữa hai mẫu (giây) do thiết bị báo.
+    public var sampleIntervalSeconds: Int?
+    /// Thời gian ở 5 vùng nhịp tim (giây): khởi động, đốt mỡ, sức bền ưa khí, sức bền kỵ khí, tối đa.
+    public var heartRateZoneSeconds: [Int]?
+    /// Sải bước trung bình / lớn nhất / nhỏ nhất (cm, theo app hãng; chưa đối chiếu thực địa).
+    public var avgStrideCm: Int?
+    public var maxStrideCm: Int?
+    public var minStrideCm: Int?
 
     public var id: Date { start }
+
+    /// Đường đi GPS: các mẫu có toạ độ, theo thời gian. Rỗng = thiết bị không có GPS hoặc bài không ghi GPS.
+    public var track: [WorkoutSample] { samples.filter { $0.latitude != nil && $0.longitude != nil } }
 
     public init(
         type: Int, name: String, start: Date, end: Date, activeSeconds: Int, steps: Int? = nil, calories: Int? = nil,
         distanceMeters: Int? = nil, avgHeartRate: Int? = nil, maxHeartRate: Int? = nil, minHeartRate: Int? = nil,
-        paceSecondsPerKm: Int? = nil
+        paceSecondsPerKm: Int? = nil, samples: [WorkoutSample] = [], sampleIntervalSeconds: Int? = nil,
+        heartRateZoneSeconds: [Int]? = nil, avgStrideCm: Int? = nil, maxStrideCm: Int? = nil, minStrideCm: Int? = nil
     ) {
         self.type = type; self.name = name; self.start = start; self.end = end; self.activeSeconds = activeSeconds
         self.steps = steps; self.calories = calories; self.distanceMeters = distanceMeters
         self.avgHeartRate = avgHeartRate; self.maxHeartRate = maxHeartRate; self.minHeartRate = minHeartRate
         self.paceSecondsPerKm = paceSecondsPerKm
+        self.samples = samples; self.sampleIntervalSeconds = sampleIntervalSeconds
+        self.heartRateZoneSeconds = heartRateZoneSeconds
+        self.avgStrideCm = avgStrideCm; self.maxStrideCm = maxStrideCm; self.minStrideCm = minStrideCm
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case type, name, start, end, activeSeconds, steps, calories, distanceMeters, avgHeartRate, maxHeartRate, minHeartRate
+        case paceSecondsPerKm, samples, sampleIntervalSeconds, heartRateZoneSeconds, avgStrideCm, maxStrideCm, minStrideCm
+    }
+
+    /// Đọc được cả bản lưu cũ chưa có `samples`.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            type: try c.decode(Int.self, forKey: .type), name: try c.decode(String.self, forKey: .name),
+            start: try c.decode(Date.self, forKey: .start), end: try c.decode(Date.self, forKey: .end),
+            activeSeconds: try c.decode(Int.self, forKey: .activeSeconds),
+            steps: try c.decodeIfPresent(Int.self, forKey: .steps), calories: try c.decodeIfPresent(Int.self, forKey: .calories),
+            distanceMeters: try c.decodeIfPresent(Int.self, forKey: .distanceMeters),
+            avgHeartRate: try c.decodeIfPresent(Int.self, forKey: .avgHeartRate),
+            maxHeartRate: try c.decodeIfPresent(Int.self, forKey: .maxHeartRate),
+            minHeartRate: try c.decodeIfPresent(Int.self, forKey: .minHeartRate),
+            paceSecondsPerKm: try c.decodeIfPresent(Int.self, forKey: .paceSecondsPerKm),
+            samples: try c.decodeIfPresent([WorkoutSample].self, forKey: .samples) ?? [],
+            sampleIntervalSeconds: try c.decodeIfPresent(Int.self, forKey: .sampleIntervalSeconds),
+            heartRateZoneSeconds: try c.decodeIfPresent([Int].self, forKey: .heartRateZoneSeconds),
+            avgStrideCm: try c.decodeIfPresent(Int.self, forKey: .avgStrideCm),
+            maxStrideCm: try c.decodeIfPresent(Int.self, forKey: .maxStrideCm),
+            minStrideCm: try c.decodeIfPresent(Int.self, forKey: .minStrideCm)
+        )
+    }
+}
+
+/// Một mẫu trong bài tập. Trường nào thiết bị không gửi thì nil. `paceSecondsPerKm` cho môn đi/chạy, `speedKmh` cho đạp xe.
+public struct WorkoutSample: Sendable, Equatable, Codable {
+    public var time: Date
+    public var heartRate: Int?
+    public var paceSecondsPerKm: Int?
+    public var speedKmh: Double?
+    /// Nhịp bước (bước/phút) hoặc nhịp đạp.
+    public var cadence: Int?
+    public var latitude: Double?
+    public var longitude: Double?
+
+    public init(
+        time: Date, heartRate: Int? = nil, paceSecondsPerKm: Int? = nil, speedKmh: Double? = nil, cadence: Int? = nil,
+        latitude: Double? = nil, longitude: Double? = nil
+    ) {
+        self.time = time; self.heartRate = heartRate; self.paceSecondsPerKm = paceSecondsPerKm; self.speedKmh = speedKmh
+        self.cadence = cadence; self.latitude = latitude; self.longitude = longitude
     }
 }
 

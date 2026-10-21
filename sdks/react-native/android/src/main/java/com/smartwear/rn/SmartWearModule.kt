@@ -533,6 +533,31 @@ class SmartWearModule(reactContext: ReactApplicationContext) : NativeSmartWearSp
                     w.maxHeartRate?.let { putInt("maxHeartRate", it) } ?: putNull("maxHeartRate")
                     w.minHeartRate?.let { putInt("minHeartRate", it) } ?: putNull("minHeartRate")
                     w.paceSecondsPerKm?.let { putInt("paceSecondsPerKm", it) } ?: putNull("paceSecondsPerKm")
+                    w.sampleIntervalSeconds?.let { putInt("sampleIntervalSeconds", it) } ?: putNull("sampleIntervalSeconds")
+                    w.heartRateZoneSeconds?.let { putArray("heartRateZoneSeconds", Arguments.fromList(it)) } ?: putNull("heartRateZoneSeconds")
+                    w.avgStrideCm?.let { putInt("avgStrideCm", it) } ?: putNull("avgStrideCm")
+                    w.maxStrideCm?.let { putInt("maxStrideCm", it) } ?: putNull("maxStrideCm")
+                    w.minStrideCm?.let { putInt("minStrideCm", it) } ?: putNull("minStrideCm")
+                    putArray("samples", Arguments.createArray().apply {
+                        w.samples.forEach { x ->
+                            pushMap(Arguments.createMap().apply {
+                                putDouble("t", x.time.toDouble())
+                                x.heartRate?.let { putInt("heartRate", it) } ?: putNull("heartRate")
+                                x.paceSecondsPerKm?.let { putInt("paceSecondsPerKm", it) } ?: putNull("paceSecondsPerKm")
+                                x.speedKmh?.let { putDouble("speedKmh", it) } ?: putNull("speedKmh")
+                                x.cadence?.let { putInt("cadence", it) } ?: putNull("cadence")
+                                x.latitude?.let { putDouble("latitude", it) } ?: putNull("latitude")
+                                x.longitude?.let { putDouble("longitude", it) } ?: putNull("longitude")
+                            })
+                        }
+                    })
+                    putArray("track", Arguments.createArray().apply {
+                        w.track.forEach { x ->
+                            pushMap(Arguments.createMap().apply {
+                                putDouble("t", x.time.toDouble()); putDouble("latitude", x.latitude!!); putDouble("longitude", x.longitude!!)
+                            })
+                        }
+                    })
                 })
             }
         })

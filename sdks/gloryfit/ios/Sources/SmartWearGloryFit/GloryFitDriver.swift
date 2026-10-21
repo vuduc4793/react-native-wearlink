@@ -38,6 +38,8 @@ public enum GloryFitDebug {
     nonisolated(unsafe) public static var noRetry = false
     /// Gửi `A3` 9 byte (thêm giờ lệch GMT như SDK iOS gốc, doc 09 §1.5). Chưa kiểm chứng trên Y25/HT43 nên mặc định tắt.
     nonisolated(unsafe) public static var timeZoneByte = false
+    /// In mọi gói `FD` của luồng đồng bộ bài tập (hex), để đối chiếu bản ghi có GPS với `UteWorkoutRecord`.
+    nonisolated(unsafe) public static var workoutPackets = false
 }
 
 /// Yêu cầu người dùng trong lúc bind. Core iOS chưa có khái niệm `PairingPrompt` nên để ở driver.
@@ -1195,6 +1197,7 @@ public final class GloryFitDevice: WearableDevice {
             var done = 0
             while let p = try await channel.receive(timeout: idle) {
                 packets.append(p)
+                if GloryFitDebug.workoutPackets { SmartWearLog.i("[\(name)] bài tập gói: \(p.map { String(format: "%02X", $0) }.joined(separator: " "))") }
                 if let n = Ute.workoutCount(p) { expected = n }
                 if expected == 0 { break }
                 if Ute.isWorkoutEnd(p) {

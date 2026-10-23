@@ -121,10 +121,8 @@ object GloryFitDriver : DeviceDriver {
     @Volatile var bondOnConnect: Boolean = true
 
     override fun match(device: ScannedDevice): DriverMatch? {
-        val name = device.name.orEmpty()
-        val advertisesUte = device.serviceUuids.any { it in Ute.ADVERTISED }
-        if (!advertisesUte && !name.startsWith("Y25")) return null
-        return DriverMatch(name.substringBefore('_').ifEmpty { "Thiết bị GloryFit" })
+        if (!Ute.matches(device.name, device.serviceUuids)) return null
+        return DriverMatch(device.name.orEmpty().substringBefore('_').ifEmpty { "Thiết bị GloryFit" })
     }
 
     override fun create(context: Context, device: ScannedDevice, match: DriverMatch) =

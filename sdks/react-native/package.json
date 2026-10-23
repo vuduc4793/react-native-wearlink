@@ -1,6 +1,6 @@
 {
   "name": "react-native-wearlink",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "React Native TurboModule (Android + iOS) kết nối điện thoại với thiết bị đeo: đồng hồ GloryFit/UTE (Y25), vòng tay Veepoo (GE54), nhẫn QRing, thiết bị Bluetooth chuẩn — đo, lịch sử, cài đặt, thông báo, cuộc gọi, nhạc, báo thức",
   "main": "src/index.ts",
   "types": "src/index.ts",

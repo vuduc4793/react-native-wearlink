@@ -41,6 +41,13 @@ object Ute {
         0x5554, 0x4544, 0x4231, 0x424C, 0x4F4F, 0x3455,
     ).map(::uuid16)
 
+    /** Tiền tố tên dự phòng khi quảng bá không có UUID ở [ADVERTISED] (Y25_6E1B, HT43(ID-2750)); như `Ute.namePrefixes` iOS. */
+    val NAME_PREFIXES = listOf("Y25", "HT43")
+
+    /** Thiết bị quét được có phải UTE không: quảng bá UUID trong [ADVERTISED] hoặc tên thuộc [NAME_PREFIXES]. */
+    fun matches(name: String?, serviceUuids: List<UUID>): Boolean =
+        serviceUuids.any { it in ADVERTISED } || NAME_PREFIXES.any { name.orEmpty().startsWith(it) }
+
     fun u(b: ByteArray, i: Int) = b[i].toInt() and 0xFF
     fun be16(b: ByteArray, i: Int) = (u(b, i) shl 8) or u(b, i + 1)
     internal fun be24(b: ByteArray, i: Int) = (u(b, i) shl 16) or (u(b, i + 1) shl 8) or u(b, i + 2)
